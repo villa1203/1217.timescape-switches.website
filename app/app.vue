@@ -4,6 +4,7 @@
     <div>
       <Nav/>
     </div>
+    {{`${useRuntimeConfig().public.apiBase}/api/query`}}
     <div>
       <NuxtPage/>
     </div>
