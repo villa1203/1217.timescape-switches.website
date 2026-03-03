@@ -3,6 +3,10 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
+  app: {
+    baseURL: '/',
+  },
+
   css: ['~/assets/_main.scss'],
 
   imports: {
@@ -10,10 +14,10 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    betterAuthSecret: process.env.BETTER_AUTH_SECRET || 'your-secret-key-change-this-in-production',
-    betterAuthUrl: process.env.BETTER_AUTH_URL,
+    secret_API_AUTH_EMAIL: process.env.API_AUTH_EMAIL,
+    secret_API_AUTH_PASSWORD: process.env.API_AUTH_PASSWORD,
     public: {
-      baseUrl: process.env.NUXT_PUBLIC_BASE_URL,
+      apiBase: process.env.NUXT_PUBLIC_API_BASE,
     },
   },
 
