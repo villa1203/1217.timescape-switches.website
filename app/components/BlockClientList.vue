@@ -3,9 +3,9 @@
     <h2>{{block_data.content.title}}</h2>
 
     <div>
-      <div v-for="client of data?.result.content">
+      <div v-for="client of data?.result?.content">
         {{client.title}}
-        <img :src="client.logo.reg.url"
+        <img :src="client.logo?.reg.url"
         />
       </div>
     </div>
@@ -21,12 +21,12 @@ defineProps<{
 }>()
 
 type FetchData = CMS_API_Response & {
-  "result": {
-    "title": string,
-    "slug": string,
-    content: {
-      title: string,
-      logo: CMS_API_ImageInstance
+  "result"?: {
+    "title"?: string,
+    "slug"?: string,
+    content?: {
+      title?: string,
+      logo?: CMS_API_ImageInstance
     }[],
   }
 }
