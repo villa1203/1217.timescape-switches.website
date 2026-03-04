@@ -14,10 +14,11 @@ h3, .app-text-h3 {
   line-height: 100%;
 }
 
-.p, .app-text-reg {
+p, .app-text-reg {
   font-weight: 400;
   font-size: 1rem;
   line-height: 100%;
+  max-width: 40em;
 }
 
 strong, .app-text-strong {
@@ -25,7 +26,7 @@ strong, .app-text-strong {
 }
 
 .app-color-grey {
-  color: hsla(0, 0%, 42%, 1);
+  color: hsl(0, 0%, 50%);
 }
 
 .app-text-align-center { text-align: center; }

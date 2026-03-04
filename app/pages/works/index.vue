@@ -3,7 +3,7 @@
   >
     <AppRAndomProjects/>
 
-    <div v-if="data?.result?.projects">
+    <div v-if="data?.result?.projects" class="app-with-padding--left-right">
       <AppProjectsList
         :filters="[
           {title: 'Art Direction', slug: 'art-direction'},
@@ -50,6 +50,7 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
         query: 'page.children',
         select: {
           title: true,
+          baseline: true,
           slug: true,
           sectors: {
             query: 'page.sectors.toPages',

@@ -37,13 +37,15 @@
       </template>
 
       <template v-else-if="block.type === 'sketch_text'">
-        <iframe
-          style="
-            border: none;
-            width: 100%;
-            height: 100vh;
-          "
-          src="/sketches/intro/index.html"/>
+        <div style="margin-top: calc( -1 * var(--app-row-gap)); margin-bottom: calc( -1 * var(--app-row-gap))">
+          <iframe
+            style="
+              border: none;
+              width: 100%;
+              height: 100vh;
+            "
+            src="/sketches/intro/index.html"/>
+        </div>
       </template>
 
 

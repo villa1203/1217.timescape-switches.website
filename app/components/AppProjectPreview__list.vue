@@ -1,8 +1,8 @@
 <template>
     <nuxt-link class="v-app-project-preview--list app-rm-child-margin"
-               :to="`works/${slug}`"
+               :to="`/works/${slug}`"
     >
-      <h3>{{title}}</h3>
+      <button class="v-app-project-preview--list__title">{{title}}</button>
       <img class="v-app-project-preview--list__cover"
            :src="image.reg.url"
       />
@@ -31,6 +31,13 @@ defineProps<{
 .v-app-project-preview--list {
   color: inherit;
   text-decoration: inherit;
+  position: relative;
+}
+
+.v-app-project-preview--list__title {
+  position: absolute;
+  top: var(--app-gutter);
+  left: var(--app-gutter);
 }
 
 .v-app-project-preview--list__cover {

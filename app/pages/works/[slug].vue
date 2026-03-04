@@ -7,8 +7,8 @@
         <img class="v-projet-slug__img"
              :src="data.result.cover.reg.url">
 
-        <div class="app-grid app-with-padding--left-right">
-          <div class="app-grid__col-8 app-child-no-margin">
+        <div class="v-projet-slug__intro app-grid app-with-padding--left-right app-max-width-reg app-margin-left-right-auto">
+          <div class="app-grid__col-10 app-child-no-margin">
             <h1>{{ data.result.title }}</h1>
             <div v-html="data.result.intro" />
             <div class="app-grid app-grid--wrap v-projet-slug__collaborators">
@@ -17,7 +17,7 @@
                 {{collaborator.title}}</div>
             </div>
           </div>
-          <div class="app-grid__col-4">
+          <div class="app-grid__col-2">
             <div class="app-grid app-grid--direction-column">
               <div v-if="data.result.clients">
                 <h4 style="margin: 0">Client</h4>
@@ -27,12 +27,12 @@
               </div>
 
               <div v-if="data.result.date">
-                <h4 style="margin: 0">Période</h4>
+                <h4 style="margin: 0">Period</h4>
                 {{ formaterDate(data.result.date)  }}
               </div>
 
               <div v-if="data.result.sectors">
-                <h4 style="margin: 0">Contrat</h4>
+                <h4 style="margin: 0">Contract</h4>
                 <div v-for="sector of data.result.sectors">
                   {{ sector.title }}
                 </div>
@@ -46,10 +46,12 @@
               </div>
 
               <div v-if="data.result.localisation">
+                <h4 style="margin: 0">Localisation</h4>
                 {{ data.result.localisation }}
               </div>
 
               <div v-if="data.result.photo_credits">
+                <h4 style="margin: 0">photo credits</h4>
                 {{ data.result.photo_credits }}
               </div>
             </div>
@@ -163,6 +165,10 @@ const {data, status} = await useFetch<FetchData>('/api/CMS_KQLRequest', {
   width: 100%;
   height: 100vh;
   object-fit: cover;
+}
+
+.v-projet-slug__intro {
+  padding-top: var(--app-gutter);
 }
 
 .v-projet-slug__collaborators {

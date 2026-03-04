@@ -4,7 +4,7 @@
     <div class="app-grid app-grid--align-start app-grid--justify-center">
       <header v-if="block_data.content.title"
               :class="{
-                'app-grid__col-4': block_data.content.text
+                'app-grid__col-6': block_data.content.text
               }"
       >
         <div class="app-grid app-grid--align-start app-grid--justify-center">
@@ -18,7 +18,7 @@
 
       <div v-if="block_data.content.text"
            :class="{
-              'app-grid__col-8': block_data.content.title,
+              'app-grid__col-6': block_data.content.title,
               'app-grid__col-12': !block_data.content.title,
             }"
       >
