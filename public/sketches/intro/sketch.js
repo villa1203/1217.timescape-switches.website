@@ -391,7 +391,7 @@ function drawDifferenceText() {
   fill(255);
   textSize(20 * fontRapport);
   textLeading(28 * fontRapport);
-  textAlign(LEFT, CENTER);
+  textAlign(CENTER);
 
   text(BASE_LINE, x, y - 12 * fontRapport, maxW);
 
@@ -409,7 +409,7 @@ function drawDifferenceText() {
   );
   const t = easeInOutCubic(raw);
 
-  const lineH = 28;
+  const lineH = 28 * fontRapport;
   const rectX = x;
   const rectW = maxW;
   const rectH = lineH;
