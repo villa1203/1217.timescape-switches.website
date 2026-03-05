@@ -1,6 +1,4 @@
 export const KQL_QUERY_BLOCKS = {
-  query: "page.content.content.toBlocks",
-  select: {
     id: true,
     type: true,
     isHidden: true,
@@ -111,7 +109,6 @@ export const KQL_QUERY_BLOCKS = {
         },
       },
     },
-  },
 };
 
 export const KQL_PROJECTS_SELECT = {

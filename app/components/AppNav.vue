@@ -2,51 +2,21 @@
     <nav class="v-nav app-with-padding--left-right app-with-padding--top-bottom"
     >
       <div class="app-grid app-grid--justify-between">
-
-        <div class="app-button" style="z-index: 10"
-             :class="{'infos-is-open': infosIsOpen}"
-        >
-          <div class="app-grid app-grid--align-center">
-            <nuxt-link to="/">
-              <img src="/logo.svg" role="button"/>
-            </nuxt-link>
-            <div @click="infosIsOpen = !infosIsOpen">
-              <div class="toggle-infos">
-                <UIOpen/>
-              </div>
-            </div>
-          </div>
+        <div>
         </div>
 
-        <div v-if="infosIsOpen"
-             class="app-rm-child-margin v-nav__infos"
-        >
-          <p>
-            <span class="app-text-strong">informations</span>
-            <br>Daisy Chain is a new motion studio co-directed by Harry Butt and Connor Campbell with a focus on playful, experimental, vibrant aesthetics.</p>
-          <p>We work with 3D, 2D and generative animation to create music videos, brand identities and typography in motion.</p>
+<!--        <div>-->
+<!--          <div class="app-grid">-->
+<!--            <div>-->
+<!--              <StickerButton text="Research" to="/Research" :font-size="24" :stroke-width="20" />-->
+<!--            </div>-->
 
-          <p>
-            <span class="app-text-strong">Get in touch</span>
-            <br>295 Hoxton Street
-            <br>London
-            <br>N1 5JX
-          </p>
+<!--            <div>-->
+<!--              <StickerButton text="Info" to="Info" :font-size="24" :stroke-width="20" />-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </div>-->
 
-          <div style="margin-top: 10rem;" class="app-grid">
-            <span class="app-button app-button--negative">Instagram</span>
-            <span class="app-button app-button--negative">LinkedIn</span>
-          </div>
-
-        </div>
-
-        <nav class="app-grid app-grid--justify-end"
-             style="gap: .5rem"
-        >
-          <nuxt-link class="app-button" to="/works">works</nuxt-link>
-<!--          <nuxt-link class="app-button" to="/office">office</nuxt-link>-->
-          <nuxt-link class="app-button" to="/research">research</nuxt-link>
-        </nav>
 
       </div>
     </nav>

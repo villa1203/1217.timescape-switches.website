@@ -1,12 +1,11 @@
 @use '../../node_modules/normalize.css/normalize.css';
-@use "./font-loading";
 @use "./grid";
 @use "./typo";
 
 :root {
-  --app-color-primary: hsla(66, 100%, 58%, 1);
-  //--app-color-secondary: #ff00ff;
-  //--app-color-ternary: #ebd7c8;
+  --app-color-primary: #820FC1;
+  --app-color-secondary: #FF6600;
+  --app-color-ternary: #ebd7c8;
   --app-color-light: #FFF;
   --app-color-dark: #000;
 
@@ -22,50 +21,25 @@
   --app-row-gap: 15rem;
 }
 
-* {
-  transition: background 1s ease, color 1s ease;
-}
-
 html {
-  font-family: 'ES Allianz', sans-serif;
+  font-family: 'Sligoil', sans-serif;
   font-size: 16px;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   font-weight: 400;
   font-size: 1rem;
   line-height: 100%;
-  color: var(--app-color-dark);
-  background-color: var(--app-color-light);
-
-  &.v-block--is-visible {
-    --app-color-light: #000;
-    --app-color-dark: #FFF;
-  }
+  user-select: none;
 }
 
 button, .app-button {
-  background: hsla(0, 0%, 0%, 0.25);
+  background: hsla(0, 0%, 0%, 0.3);
   text-decoration: none;
-  padding: .75rem;
-  border-radius: .6rem;
-  color: white;
+  padding: .5rem;
+  border-radius: .25rem;
+  color: var(--app-color-light);
   border: none;
-  backdrop-filter: blur(10px);
-  cursor: pointer;
-  user-select: none;
-
-  &.app-button--variant-primary {
-    color: black;
-    background: var(--app-color-primary);
-  }
-
-  &.app-button--negative {
-    border: 1px solid white;
-    background: transparent;
-  }
 }
 
 .app-video__cover {
@@ -85,37 +59,3 @@ button, .app-button {
 }
 
 //-------//
-
-/* Global Scrollbar Styles */
-
-/* Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: black transparent;
-}
-
-/* Chrome, Edge, and Safari */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background-color: black;
-  border-radius: 10px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background-color: var(--app-color-dark);
-}
-
-.app-scroll__scrollable-container {
-  overflow-x: scroll;
-  position: relative;
-}

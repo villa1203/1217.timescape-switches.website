@@ -1,13 +1,18 @@
 <template>
   <div class="v-app"
   >
+
+    <P5Background />
+
     <div class="v-app__header app-grid">
       <AppNav/>
     </div>
+
     <main>
       <NuxtPage/>
     </main>
-    <div>
+
+    <div class="v-app__footer app-grid">
       <AppFooter/>
     </div>
   </div>
@@ -36,5 +41,10 @@ useRouter().afterEach(() => {
   width: 100%;
   box-sizing: border-box;
   z-index: 100;
+}
+
+.v-app-footer {
+  position: fixed;
+  bottom: 0;
 }
 </style>
