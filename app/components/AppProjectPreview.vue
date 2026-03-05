@@ -51,5 +51,6 @@ defineProps<{
   object-fit: cover;
   aspect-ratio: 3/2;
   padding-bottom: .5rem;
+  max-height: calc( 100vh - 2rem);
 }
 </style>

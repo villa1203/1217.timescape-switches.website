@@ -73,6 +73,11 @@ const props = defineProps<{
 
   &.is-full {
     width: 100%;
+
+    video {
+      height: 100vh;
+      object-fit: cover;
+    }
   }
 
   &.is-large {

@@ -16,6 +16,10 @@
 
 <script setup lang="ts">
 
+useRouter().afterEach(() => {
+  document.body.classList.remove('v-block--is-visible')
+})
+
 </script>
 
 
