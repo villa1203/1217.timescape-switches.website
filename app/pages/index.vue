@@ -190,6 +190,21 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
     }
   }
 })
+
+let timeoutId: any;
+
+document.addEventListener('mousemove', function(e) {
+  // Efface le timeout précédent s'il existe
+  clearTimeout(timeoutId);
+
+  // Démarre un nouveau timeout
+  timeoutId = setTimeout(function() {
+    indexToShow.value = 0
+    // Cette fonction sera exécutée après 2 secondes d'inactivité de la souris
+    console.log('La souris n\'a pas bougé depuis 30 secondes !');
+    // Vous pouvez ajouter ici le code à exécuter lorsque la souris est inactive.
+  }, 30_000);
+});
 </script>
 
 
