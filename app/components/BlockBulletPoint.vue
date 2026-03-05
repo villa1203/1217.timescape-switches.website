@@ -13,21 +13,21 @@
           <div class="block-bullet-point__coll">
             <div>
               <div class="block-bullet-point__coll__title">Workshop</div>
-              <div>Les produits d’Otio se distinguent depuis des années grâce à un principe clef : la simplicité d’abord. Seulement voilà, côté présence digitale, on n’y était pas. Les produits d’Otio se distinguent depuis des années grâce à un principe clef : la simplicité d’abord. Seulement voilà, côté présence digitale, on n’y était pas.</div>
+              <div>Workshops are a key part of the studio’s practice, creating spaces for experimentation and collective exploration. They allow ideas to be tested through discussion, prototyping, and collaboration with students, professionals, and institutions. These moments of exchange often become a starting point for new research directions and future projects.</div>
             </div>
             <div>
-              <div class="block-bullet-point__coll__title">Publications</div>
-              <div>Les produits d’Otio se distinguent depuis des années grâce à un principe clef : la simplicité d’abord. Seulement voilà, côté présence digitale, on n’y était pas. Les produits d’Otio se distinguent depuis des années grâce à un principe clef : la simplicité d’abord. Seulement voilà, côté présence digitale, on n’y était pas.</div>
+              <div class="block-bullet-point__coll__title">Publication</div>
+              <div>Publications document and share the studio’s research. Through essays, research papers, and visual materials, they allow ideas to circulate beyond the studio and contribute to broader discussions in design. Writing and publishing also provide a way to reflect critically on design practices.</div>
             </div>
           </div>
           <div class="block-bullet-point__coll">
             <div>
-              <div class="block-bullet-point__coll__title">Workshop</div>
-              <div>Les produits d’Otio se distinguent depuis des années grâce à un principe clef : la simplicité d’abord. Seulement voilà, côté présence digitale, on n’y était pas. Les produits d’Otio se distinguent depuis des années grâce à un principe clef : la simplicité d’abord. Seulement voilà, côté présence digitale, on n’y était pas.</div>
+              <div class="block-bullet-point__coll__title">Venture Design</div>
+              <div>Venture design allows the studio to develop projects that move from research to real-world applications. It explores how design ideas can evolve into tools, systems, or initiatives with practical impact. This approach allows design to move beyond speculation and engage directly with implementation and long-term development.</div>
             </div>
             <div>
-              <div class="block-bullet-point__coll__title">Publications</div>
-              <div>Les produits d’Otio se distinguent depuis des années grâce à un principe clef : la simplicité d’abord. Seulement voilà, côté présence digitale, on n’y était pas. Les produits d’Otio se distinguent depuis des années grâce à un principe clef : la simplicité d’abord. Seulement voilà, côté présence digitale, on n’y était pas.</div>
+              <div class="block-bullet-point__coll__title">Speculative Design</div>
+              <div>Speculative design enables the studio to explore alternative futures and question existing systems. Through conceptual projects and prototypes, it opens space for reflection on how design can shape emerging technological and social conditions.</div>
             </div>
           </div>
         </div>
