@@ -7,6 +7,8 @@ export default defineNuxtConfig({
     baseURL: '/',
   },
 
+  ssr: false,
+
   css: ['~/assets/_main.scss'],
 
   imports: {
