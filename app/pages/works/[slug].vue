@@ -31,13 +31,6 @@
                 {{ formaterDate(data.result.date)  }}
               </div>
 
-              <div v-if="data.result.sectors">
-                <h4 style="margin: 0">Contract</h4>
-                <div v-for="sector of data.result.sectors">
-                  {{ sector.title }}
-                </div>
-              </div>
-
               <div v-if="data.result.services">
                 <h4 style="margin: 0">Expertise</h4>
                 <div v-for="service of data.result.services">
