@@ -171,6 +171,7 @@ export const KQL_PROJECTS_SELECT = {
     query: 'page.services.toPages',
     select: {
       title: true,
+      slug: true,
     }
   },
   localisation: true,

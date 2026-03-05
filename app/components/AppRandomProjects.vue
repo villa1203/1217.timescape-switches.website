@@ -61,7 +61,7 @@ function getRandomImageOrVideoImageOfProject(project: CMS_API_Page_projet): stri
 <style lang="scss" >
 .v-app-random-projects {
   width: 100%;
-  height: 100vh;
+  height: calc( 100vh - 10rem);
   overflow: hidden;
 }
 

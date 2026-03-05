@@ -1,7 +1,8 @@
 <template>
     <section class="v-app-last-projects-preview--list"
              :class="{
-                'show-gradient': showGradient
+                'show-gradient': showGradient,
+                'no-gradient': pages.length < 5,
              }"
     >
       <div class="app-grid app-grid--align-start app-grid--justify-start v-app-last-projects-preview--list__scroll app-scroll__scrollable-container"
@@ -70,6 +71,9 @@ function onScrollInGallery(e: Event) {
     transform: translateX(100%);
     pointer-events: none;
   }
+  &.no-gradient::after {
+    content: none;
+  }
 
   &.show-gradient::after {
     transform: translateX(0);
@@ -83,5 +87,6 @@ function onScrollInGallery(e: Event) {
 .v-app-last-projects-preview--list__button {
   position: relative;
   z-index: 10;
+  margin-top: var(--app-gutter);
 }
 </style>

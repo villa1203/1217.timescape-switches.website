@@ -9,7 +9,7 @@
         </div>
         <div class="app-grid__col-4" >
           <div class="app-text-strong">services</div>
-          <div v-for="sector of project.sectors" :key="sector.title">{{sector.title}}</div>
+          <div v-for="sector of project.services" :key="sector.title">{{sector.title}} / {{sector.slug}}</div>
         </div>
         <div class="app-grid__col-4" >
           <div class="app-text-strong">sector</div>
@@ -51,7 +51,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { CMS_API_Page_projet } from "~/shared/cms_api"
+import type {CMS_API_Page_projet} from "#shared/cms_api";
 
 defineProps<{
   project: CMS_API_Page_projet

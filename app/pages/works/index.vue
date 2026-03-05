@@ -10,10 +10,11 @@
       <AppProjectsList
         :filters="[
           {title: 'Art Direction', slug: 'art-direction'},
-          {title: 'Visual Identity', slug: 'indentite'},
-          {title: 'Brand Strategy', slug: 'strategy'},
+          {title: 'Visual Identity', slug: 'visual-identity'},
+          {title: 'Motion Design', slug: 'motion-design'},
+          {title: 'Brand Strategy', slug: 'brand-strategy'},
           {title: 'Web Development', slug: 'web-development'},
-          {title: 'Web Design', slug: 'Web Design'},
+          {title: 'Web Design', slug: 'web-design'},
         ]"
         :projects="getProjectBySector('commercial' ,data.result.projects)"
       />
