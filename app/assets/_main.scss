@@ -61,6 +61,11 @@ button, .app-button {
     color: black;
     background: var(--app-color-primary);
   }
+
+  &.app-button--negative {
+    border: 1px solid white;
+    background: transparent;
+  }
 }
 
 .app-video__cover {
