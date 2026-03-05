@@ -1,21 +1,15 @@
 <template>
-  <main class="v-works"
+  <main class="v-research"
   >
-    <AppRandomProjects
-      v-if="data?.result?.projects"
-      :projects="data.result.projects"
-    />
+
+    <BlockBulletPoint />
 
     <div v-if="data?.result?.projects" class="app-with-padding--left-right">
       <AppProjectsList
         :filters="[
-          {title: 'Art Direction', slug: 'art-direction'},
-          {title: 'Visual Identity', slug: 'indentite'},
-          {title: 'Brand Strategy', slug: 'strategy'},
-          {title: 'Web Development', slug: 'web-development'},
-          {title: 'Web Design', slug: 'Web Design'},
+          // {title: 'Art Direction', slug: 'art-direction'},
         ]"
-        :projects="getProjectBySector('commercial' ,data.result.projects)"
+        :projects="getProjectBySector('research' ,data.result.projects)"
       />
     </div>
 
@@ -28,6 +22,7 @@
 import type {CMS_API_Page_projet, CMS_API_Response, CMS_BlockData} from "#shared/cms_api";
 import {KQL_PROJECTS_SELECT, KQL_QUERY_BLOCKS} from "#shared/KQLQueries";
 import {getProjectBySector} from "#shared/projects_utils";
+import BlockBulletPoint from "~/components/BlockBulletPoint.vue";
 
 type FetchData = CMS_API_Response & {
   "result": {
@@ -59,6 +54,6 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
 
 
 <style lang="scss" scoped>
-.v-works {
+.v-research {
 }
 </style>

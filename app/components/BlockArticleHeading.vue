@@ -7,7 +7,7 @@
                 'app-grid__col-6': block_data.content.text
               }"
       >
-        <div class="app-grid app-grid--align-start app-grid--justify-center">
+        <div class="app-grid app-grid--align-start app-grid--justify-center app-rm-child-margin">
           <h2
             :class="{
                 'app-text-align-center': !block_data.content.text
