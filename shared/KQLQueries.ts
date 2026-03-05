@@ -47,6 +47,12 @@ export const KQL_QUERY_BLOCKS = {
             slug: true,
             baseline: true,
             preview_full_size: true,
+            covers_video: {
+              query: "page.covers_video.toFiles.first",
+              select: {
+                url: true,
+              }
+            },
             cover: {
               query: "page.covers.toFiles.first",
               select: {
