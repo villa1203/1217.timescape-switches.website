@@ -82,8 +82,4 @@ const activeColor = computed(() => {
   text-decoration: none;
   transition: transform 0.2s ease;
 }
-
-.sticker-button:hover {
-  transform: scale(1.05);
-}
 </style>

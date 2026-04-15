@@ -127,7 +127,6 @@
 <script setup lang="ts">
 import type {CMS_API_ImageInstance, CMS_API_Response, CMS_BlockData} from "#shared/cms_api";
 import {KQL_QUERY_BLOCKS} from "#shared/KQLQueries";
-import CMS_KQLRequest from "#server/api/CMS_KQLRequest";
 
 const indexToShow = ref(0)
 
@@ -193,18 +192,20 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
 
 let timeoutId: any;
 
-document.addEventListener('mousemove', function(e) {
-  // Efface le timeout précédent s'il existe
-  clearTimeout(timeoutId);
+if (import.meta.client) {
+  document.addEventListener('mousemove', function(e) {
+    // Efface le timeout précédent s'il existe
+    clearTimeout(timeoutId);
 
-  // Démarre un nouveau timeout
-  timeoutId = setTimeout(function() {
-    indexToShow.value = 0
-    // Cette fonction sera exécutée après 2 secondes d'inactivité de la souris
-    console.log('La souris n\'a pas bougé depuis 30 secondes !');
-    // Vous pouvez ajouter ici le code à exécuter lorsque la souris est inactive.
-  }, 30_000);
-});
+    // Démarre un nouveau timeout
+    timeoutId = setTimeout(function() {
+      indexToShow.value = 0
+      // Cette fonction sera exécutée après 2 secondes d'inactivité de la souris
+      console.log('La souris n\'a pas bougé depuis 30 secondes !');
+      // Vous pouvez ajouter ici le code à exécuter lorsque la souris est inactive.
+    }, 30_000);
+  });
+}
 </script>
 
 
