@@ -3,19 +3,16 @@
     >
       <div class="app-grid app-grid--justify-between">
         <div>
+          <div class="app-grid">
+            <div>
+              <StickerButton text="Research" to="/Research" :font-size="24" :stroke-width="20" />
+            </div>
+
+            <div>
+              <StickerButton text="Info" to="Info" :font-size="24" :stroke-width="20" />
+            </div>
+          </div>
         </div>
-
-<!--        <div>-->
-<!--          <div class="app-grid">-->
-<!--            <div>-->
-<!--              <StickerButton text="Research" to="/Research" :font-size="24" :stroke-width="20" />-->
-<!--            </div>-->
-
-<!--            <div>-->
-<!--              <StickerButton text="Info" to="Info" :font-size="24" :stroke-width="20" />-->
-<!--            </div>-->
-<!--          </div>-->
-<!--        </div>-->
 
 
       </div>
