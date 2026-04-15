@@ -36,7 +36,7 @@ onMounted(() => {
 })
 
 watch(() => props.text, () => {
-  setTimeout(updateWidth, 0)
+  updateWidth()
 })
 </script>
 
