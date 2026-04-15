@@ -32,3 +32,87 @@ strong, .app-text-strong {
 .app-text-align-center { text-align: center; }
 
 
+// Happy Times NG
+@font-face {
+  font-family: 'Happy Times NG';
+  src: url('/fonts/happy-times-NG_regular_master_web.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Happy Times NG';
+  src: url('/fonts/happy-times-NG_italic_master_web.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Happy Times NG';
+  src: url('/fonts/happy-times-NG_bold_master_web.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+// Sligoil
+@font-face {
+  font-family: 'Sligoil';
+  src: url('/fonts/Sligoil-Micro.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sligoil';
+  src: url('/fonts/Sligoil-MicroMedium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sligoil';
+  src: url('/fonts/Sligoil-MicroBold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+// Headings
+h1 {
+  font-family: 'Happy Times NG', Georgia, serif;
+  font-weight: 700;
+}
+
+h2 {
+  font-family: 'Happy Times NG', Georgia, serif;
+  font-weight: 400;
+  max-width: 35em;
+}
+
+h3 {
+  font-family: 'Happy Times NG', Georgia, serif;
+  font-weight: 400;
+}
+
+h4 {
+  font-family: 'Sligoil', sans-serif;
+  font-weight: 700;
+}
+
+// Body
+.body-1 {
+  font-family: 'Happy Times NG', Georgia, serif;
+  font-weight: 400;
+}
+
+.body-2 {
+  font-family: 'Sligoil', sans-serif;
+  font-weight: 500;
+}
+
+.app-text-align-center { text-align: center; }

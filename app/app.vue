@@ -21,6 +21,7 @@
 
 <style lang="scss" scoped>
 .v-app__header {
+  overflow-x: hidden;
   position: fixed;
   top: 0;
   left: 0;

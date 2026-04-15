@@ -1,6 +1,23 @@
 <template>
   <main class="v-index"
   >
+    <P5Background />
+
+    <div class="hero">
+      <DottedCircles class="hero-circles" />
+      <img src="/TexteTMSHOME.svg" alt="Timescape" class="hero-svg" />
+    </div>
+
+    <!-- Test ImageHover -->
+    <div class="test-hover">
+      <ImageHover
+        src="/Images/OBJET TMS WEB_Kettle 1.png"
+        src-hover="/Images/OBJET TMS WEB_Kettle 2.png"
+        alt="Kettle"
+        :blob-size="300"
+      />
+    </div>
+
     <div>
       <Blocks :content="data?.result.content || []" />
     </div>
@@ -57,5 +74,34 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
 
 <style lang="scss" scoped>
 .v-index {
+}
+
+.hero {
+  position: relative;
+  width: 100%;
+  padding: 4rem 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-circles {
+  position: absolute;
+  width: 90%; 
+  height: auto;
+  z-index: 0;
+}
+
+.hero-svg {
+  position: relative;
+  width: 80%;
+  height: auto;
+  z-index: 1;
+}
+
+.test-hover {
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
 }
 </style>
