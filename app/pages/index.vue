@@ -126,7 +126,7 @@
 
 <script setup lang="ts">
 import type {CMS_API_ImageInstance, CMS_API_Response, CMS_BlockData} from "#shared/cms_api";
-import {KQL_QUERY_BLOCKS} from "#shared/KQLQueries";
+import {KQL_SELECT_BLOCKS} from "#shared/KQLQueries";
 
 const indexToShow = ref(0)
 
@@ -184,7 +184,7 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
       },
       content: {
         query: "page.content.content.toBlocks",
-        select: KQL_QUERY_BLOCKS
+        select: KQL_SELECT_BLOCKS
       }
     }
   }

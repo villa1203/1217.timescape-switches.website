@@ -1,4 +1,4 @@
-export const KQL_QUERY_BLOCKS = {
+export const KQL_SELECT_BLOCKS = {
     id: true,
     type: true,
     isHidden: true,
@@ -77,6 +77,13 @@ export const KQL_QUERY_BLOCKS = {
             slug: true,
             baseline: true,
             preview_full_size: true,
+            services: {
+              query: 'page.services.toPages',
+              select: {
+                title: true,
+                slug: true,
+              }
+            },
             covers_video: {
               query: "page.covers_video.toFiles.first",
               select: {
@@ -109,81 +116,31 @@ export const KQL_QUERY_BLOCKS = {
         },
       },
     },
-};
+}
+
+export const KQL_SELECT_IMAGE = {
+  alt: "file.alt.value",
+  tiny: "file.resize(50, null, 10)",
+  small: "file.resize(500)",
+  reg: "file.resize(1280)",
+  large: "file.resize(1920)",
+  xxl: "file.resize(2500)",
+  focus: "file.focus",
+}
 
 export const KQL_PROJECTS_SELECT = {
   title: true,
-  baseline: true,
   slug: true,
-  intro: true,
-  covers_video: {
-    query: "page.covers_video.toFiles.first",
-    url: true,
-  },
-  sectors: {
-    query: "page.sectors.toPages",
-    select: {
-      title: true,
-      slug: true,
-    },
-  },
-  gallery: {
-    query: "page.gallery.toFiles",
-    select: {
-      alt: "file.alt.value",
-      tiny: "file.resize(50, null, 10)",
-      small: "file.resize(500)",
-      reg: "file.resize(1280)",
-      large: "file.resize(1920)",
-      xxl: "file.resize(2500)",
-      focus: "file.focus",
-    },
-  },
-  miniature: {
-    query: "page.covers.toFiles.first",
-    select: {
-      alt: "file.alt.value",
-      tiny: "file.resize(50, null, 10)",
-      small: "file.resize(500)",
-      reg: "file.resize(1280)",
-      large: "file.resize(1920)",
-      xxl: "file.resize(2500)",
-      focus: "file.focus",
-    },
-  },
-  collaborators: {
-    query: 'page.collaborators.toPages',
-    select: {
-      title: true,
-    }
-  },
-  clients: {
-    query: 'page.clients.toPages',
-    select: {
-      title: true,
-    }
-  },
-  date: true,
-  services: {
-    query: 'page.services.toPages',
-    select: {
-      title: true,
-      slug: true,
-    }
-  },
-  localisation: true,
-  photo_credits: true,
   cover: {
-    query: 'page.covers.toFiles.first',
-    select: {
-      alt: "file.alt.value",
-      tiny: 'file.resize(50, null, 10)',
-      small: 'file.resize(500)',
-      reg: 'file.resize(1280)',
-      large: 'file.resize(1920)',
-      xxl: 'file.resize(2500)',
-      focus: 'file.focus',
-    },
+    query: "page.gallery.toFiles",
+    select: KQL_SELECT_IMAGE,
   },
-  content: KQL_QUERY_BLOCKS,
-};
+  aside: {
+    query: "page.content.aside.toBlocks",
+    select: KQL_SELECT_BLOCKS,
+  },
+  content: {
+    query: "page.content.content.toBlocks",
+    select: KQL_SELECT_BLOCKS,
+  },
+}
