@@ -131,16 +131,23 @@ export const KQL_SELECT_IMAGE = {
 export const KQL_PROJECTS_SELECT = {
   title: true,
   slug: true,
-  cover: {
-    query: "page.gallery.toFiles",
-    select: KQL_SELECT_IMAGE,
-  },
-  aside: {
-    query: "page.content.aside.toBlocks",
-    select: KQL_SELECT_BLOCKS,
-  },
   content: {
     query: "page.content.content.toBlocks",
     select: KQL_SELECT_BLOCKS,
   },
+
+  cover_front: {
+    query: "page.cover_front.toFiles",
+    select: KQL_SELECT_IMAGE,
+  },
+  cover_back: {
+    query: "page.cover_back.toFiles",
+    select: KQL_SELECT_IMAGE,
+  },
+  strategies: true,
+  production: true,
+  pre_commitment: true,
+  delegated_agency: true,
+  action_and_effect: true,
+  baseline: true,
 }

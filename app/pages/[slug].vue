@@ -1,7 +1,17 @@
 <template>
   <main class="v-slug"
   >
-    <p>{{ data }}</p>
+    <p>title: {{ data?.result.title }}</p>
+    <p>slug: {{ data?.result.slug }}</p>
+    <p>content: {{ data?.result.content }}</p>
+    <p>strategies: {{ data?.result.strategies }}</p>
+    <p>production: {{ data?.result.production }}</p>
+    <p>pre_commitment: {{ data?.result.pre_commitment }}</p>
+    <p>delegated_agency: {{ data?.result.delegated_agency }}</p>
+    <p>action_and_effect: {{ data?.result.action_and_effect }}</p>
+    <p>baseline: {{ data?.result.baseline }}</p>
+    <p>cover_front: {{ data?.result.cover_front }}</p>
+    <p>cover_back: {{ data?.result.cover_back }}</p>
   </main>
 </template>
 
@@ -15,18 +25,15 @@ type FetchData = CMS_API_Response & {
   "result": {
     title: string,
     slug: string,
-    baseline: string,
-    intro: string,
-    cover: CMS_API_ImageInstance,
     content: CMS_BlockData[],
-    sectors: {title: string}[]
-    clients: {title: string}[]
-    collaborators: {title: string}[]
-    services: {title: string}[]
-    date: string
-    localisation: string
-    photo_credits: string
-    link_to_project: string
+    strategies: string
+    production: string
+    pre_commitment: string
+    delegated_agency: string
+    action_and_effect: string
+    baseline: string
+    cover_front: CMS_API_ImageInstance[]
+    cover_back: CMS_API_ImageInstance[]
   }
 }
 
