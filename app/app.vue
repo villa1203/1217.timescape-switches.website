@@ -2,14 +2,14 @@
   <div class="v-app"
   >
 
-    <P5Background />
-
     <div class="v-app__header app-grid">
       <AppNav/>
     </div>
 
     <main>
-      <NuxtPage/>
+      <NuxtPage :transition="{
+        name: 'fade',
+        }" />
     </main>
 
     <div class="v-app__footer app-grid">
@@ -49,4 +49,16 @@ useRouter().afterEach(() => {
   position: fixed;
   bottom: 0;
 }
+
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 </style>

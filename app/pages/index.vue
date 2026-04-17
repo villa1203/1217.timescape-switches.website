@@ -1,10 +1,8 @@
 <template>
   <main class="v-index"
-        @click="incrementIndex"
   >
+    <P5Background />
     <div class="app-grid app-grid--align-center app-grid--justify-center"
-         v-if="indexToShow === 0"
-         :key="-1"
     >
       <div class="app-grid__col-12">
         <div class="v-index__intro-container">
@@ -75,68 +73,14 @@
         </div>
       </div>
     </div>
-
-
-    <template v-if="data" >
-      <template v-for="(objectItem, key) of data.result">
-        <div class="app-grid app-grid--align-center app-grid--justify-center"
-             v-if="indexToShow === key + 1"
-             :key="key"
-        >
-          <div class="app-grid__col-12">
-            <div class="v-index__intro-container">
-
-              <div class="app-grid app-grid--align-center app-grid--justify-center">
-                <div class="app-grid__col-6">
-                  <div class="app-grid app-grid--align-center app-grid--justify-center">
-                    <div style="width: 50%;">
-                      <ImageHover
-                        :src="objectItem.cover_front.xxl.url"
-                        :src-hover="objectItem.cover_back.xxl.url"
-                        alt="Kettle"
-                        :blob-size="300"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div class="app-grid__col-6">
-                  <div class="app-grid app-grid--align-center app-grid--justify-center">
-                    <div style="width: 50%;">
-                      <ImageHover
-                        :src="objectItem.cover_front.xxl.url"
-                        :src-hover="objectItem.cover_back.xxl.url"
-                        alt="Kettle"
-                        :blob-size="300"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      </template>
-    </template>
-
-
   </main>
 </template>
 
 
 <script setup lang="ts">
 import type {CMS_API_ImageInstance, CMS_API_Response, CMS_BlockData} from "#shared/cms_api";
-import {KQL_SELECT_BLOCKS} from "#shared/KQLQueries";
 
 const indexToShow = ref(0)
-
-const incrementIndex = () => {
-  indexToShow.value++
-  if( !data.value ) return
-  if (indexToShow.value >= data.value.result.length) {
-    indexToShow.value = 0
-  }
-}
 
 type FetchData = CMS_API_Response & {
   "result": {
@@ -152,60 +96,8 @@ type FetchData = CMS_API_Response & {
 const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
   lazy: true,
   method: 'POST',
-  body: {
-    query: `page('objets').children`,
-    select: {
-      title: true,
-      slug: true,
-      baseline: true,
-      cover_back: {
-        query: `page.cover_back.toFiles.first`,
-        select: {
-          alt: "file.alt.value",
-          tiny: 'file.resize(50, null, 10)',
-          small: 'file.resize(500)',
-          reg: 'file.resize(1280)',
-          large: 'file.resize(1920)',
-          xxl: 'file.resize(2500)',
-          focus: 'file.focus',
-        },
-      },
-      cover_front: {
-        query: `page.cover_front.toFiles.first`,
-        select: {
-          alt: "file.alt.value",
-          tiny: 'file.resize(50, null, 10)',
-          small: 'file.resize(500)',
-          reg: 'file.resize(1280)',
-          large: 'file.resize(1920)',
-          xxl: 'file.resize(2500)',
-          focus: 'file.focus',
-        }
-      },
-      content: {
-        query: "page.content.content.toBlocks",
-        select: KQL_SELECT_BLOCKS
-      }
-    }
-  }
+  body: {}
 })
-
-let timeoutId: any;
-
-if (import.meta.client) {
-  document.addEventListener('mousemove', function(e) {
-    // Efface le timeout précédent s'il existe
-    clearTimeout(timeoutId);
-
-    // Démarre un nouveau timeout
-    timeoutId = setTimeout(function() {
-      indexToShow.value = 0
-      // Cette fonction sera exécutée après 2 secondes d'inactivité de la souris
-      console.log('La souris n\'a pas bougé depuis 30 secondes !');
-      // Vous pouvez ajouter ici le code à exécuter lorsque la souris est inactive.
-    }, 30_000);
-  });
-}
 </script>
 
 

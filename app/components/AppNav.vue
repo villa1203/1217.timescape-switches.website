@@ -3,7 +3,7 @@
     >
       <div class="app-grid app-grid--justify-between">
         <div>
-          <StickerText text="Weekly Timescape in 2 Days, 3 hours" :font_size="24" :stroke_width="20" />
+          <StickerButton text="Weekly Timescape in 2 Days, 3 hours" to="/" :font_size="24" :stroke_width="20" />
         </div>
         <div>
           <div class="app-grid">
@@ -12,7 +12,7 @@
             </div>
 
             <div>
-              <StickerButton text="Info" to="Info" :font_size="24" :stroke_width="20" />
+              <StickerButton text="Info" to="/info" :font_size="24" :stroke_width="20" />
             </div>
           </div>
         </div>

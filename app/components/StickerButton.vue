@@ -7,7 +7,7 @@ const props = defineProps<{
   href?: string
   color?: string
   hoverColor?: string
-  strokeWidth?: number
+  stroke_width?: number
   font_size?: number
 }>()
 
@@ -34,7 +34,7 @@ const activeColor = computed(() => {
     <StickerText
       :text="text"
       :color="activeColor"
-      :stroke_width="strokeWidth"
+      :stroke_width="stroke_width"
       :font_size="font_size"
     />
   </nuxt-link>
@@ -51,7 +51,7 @@ const activeColor = computed(() => {
     <StickerText
       :text="text"
       :color="activeColor"
-      :stroke_width="strokeWidth"
+      :stroke_width="stroke_width"
       :font_size="font_size"
     />
   </a>
@@ -65,7 +65,7 @@ const activeColor = computed(() => {
     <StickerText
       :text="text"
       :color="activeColor"
-      :stroke_width="strokeWidth"
+      :stroke_width="stroke_width"
       :font_size="font_size"
     />
   </button>
