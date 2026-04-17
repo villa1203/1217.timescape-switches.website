@@ -21,7 +21,7 @@ const strokeColor = computed(() => {
 const bgColor = '#ffffff'
 
 const svgWidth = computed(() => textWidth.value + (props.stroke_width || 35) + 40)
-const svgHeight = computed(() => (props.font_size || 50) * 1.5)
+const svgHeight = computed(() => (props.font_size || 50) * 1.5 * props.text.split('\n').length)
 const viewBox = computed(() => `0 0 ${svgWidth.value} ${svgHeight.value}`)
 
 const updateWidth = () => {
@@ -64,7 +64,12 @@ watch(() => props.text, () => {
           stroke: strokeColor,
           strokeWidth: `${stroke_width || 35}px`
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Glow blanc flou (ultra léger) -->
       <text
@@ -79,7 +84,12 @@ watch(() => props.text, () => {
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.15
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Glow blanc flou (très léger) -->
       <text
@@ -94,7 +104,12 @@ watch(() => props.text, () => {
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.3
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Glow blanc flou (léger) -->
       <text
@@ -109,7 +124,12 @@ watch(() => props.text, () => {
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.5
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Glow blanc flou (moyen) -->
       <text
@@ -124,7 +144,12 @@ watch(() => props.text, () => {
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.7
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Glow blanc flou (plus fort) -->
       <text
@@ -139,7 +164,12 @@ watch(() => props.text, () => {
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.9
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Centre blanc propre -->
       <text
@@ -152,7 +182,12 @@ watch(() => props.text, () => {
           stroke: bgColor,
           strokeWidth: `${(stroke_width || 35) - 20}px`
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Texte -->
       <text
@@ -165,7 +200,12 @@ watch(() => props.text, () => {
           fill: strokeColor,
           stroke: 'transparent'
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
     </svg>
   </span>
 </template>

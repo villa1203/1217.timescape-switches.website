@@ -8,7 +8,7 @@
         <div>
           <div class="app-grid">
             <div>
-              <StickerButton text="Research" to="/Research" :font_size="24" :stroke_width="20" />
+              <StickerButton text="Research" to="/research" :font_size="24" :stroke_width="20" />
             </div>
 
             <div>
