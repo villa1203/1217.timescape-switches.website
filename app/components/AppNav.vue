@@ -5,11 +5,11 @@
         <div>
           <div class="app-grid">
             <div>
-              <StickerButton text="Research" to="/Research" :font-size="24" :stroke-width="20" />
+              <StickerButton text="Research" to="/Research" :font_size="24" :stroke_width="20" />
             </div>
 
             <div>
-              <StickerButton text="Info" to="Info" :font-size="24" :stroke-width="20" />
+              <StickerButton text="Info" to="Info" :font_size="24" :stroke_width="20" />
             </div>
           </div>
         </div>

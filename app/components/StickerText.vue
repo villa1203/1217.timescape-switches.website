@@ -5,8 +5,8 @@ const props = defineProps<{
   text: string
   color?: string
   variant?: 'primary' | 'secondary'
-  strokeWidth?: number
-  fontSize?: number
+  stroke_width?: number
+  font_size?: number
 }>()
 
 const uid = useId()
@@ -20,8 +20,8 @@ const strokeColor = computed(() => {
 })
 const bgColor = '#ffffff'
 
-const svgWidth = computed(() => textWidth.value + (props.strokeWidth || 35) + 40)
-const svgHeight = computed(() => (props.fontSize || 50) * 1.5)
+const svgWidth = computed(() => textWidth.value + (props.stroke_width || 35) + 40)
+const svgHeight = computed(() => (props.font_size || 50) * 1.5)
 const viewBox = computed(() => `0 0 ${svgWidth.value} ${svgHeight.value}`)
 
 const updateWidth = () => {
@@ -57,12 +57,12 @@ watch(() => props.text, () => {
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: strokeColor,
           stroke: strokeColor,
-          strokeWidth: `${strokeWidth || 35}px`
+          strokeWidth: `${stroke_width || 35}px`
         }"
       >{{ text }}</text>
 
@@ -70,12 +70,12 @@ watch(() => props.text, () => {
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: 'transparent',
           stroke: bgColor,
-          strokeWidth: `${(strokeWidth || 35) - 2}px`,
+          strokeWidth: `${(stroke_width || 35) - 2}px`,
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.15
         }"
@@ -85,12 +85,12 @@ watch(() => props.text, () => {
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: 'transparent',
           stroke: bgColor,
-          strokeWidth: `${(strokeWidth || 35) - 5}px`,
+          strokeWidth: `${(stroke_width || 35) - 5}px`,
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.3
         }"
@@ -100,12 +100,12 @@ watch(() => props.text, () => {
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: 'transparent',
           stroke: bgColor,
-          strokeWidth: `${(strokeWidth || 35) - 8}px`,
+          strokeWidth: `${(stroke_width || 35) - 8}px`,
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.5
         }"
@@ -115,12 +115,12 @@ watch(() => props.text, () => {
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: 'transparent',
           stroke: bgColor,
-          strokeWidth: `${(strokeWidth || 35) - 12}px`,
+          strokeWidth: `${(stroke_width || 35) - 12}px`,
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.7
         }"
@@ -130,12 +130,12 @@ watch(() => props.text, () => {
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: 'transparent',
           stroke: bgColor,
-          strokeWidth: `${(strokeWidth || 35) - 16}px`,
+          strokeWidth: `${(stroke_width || 35) - 16}px`,
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.9
         }"
@@ -145,12 +145,12 @@ watch(() => props.text, () => {
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: bgColor,
           stroke: bgColor,
-          strokeWidth: `${(strokeWidth || 35) - 20}px`
+          strokeWidth: `${(stroke_width || 35) - 20}px`
         }"
       >{{ text }}</text>
 
@@ -159,9 +159,9 @@ watch(() => props.text, () => {
         ref="textRef"
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: strokeColor,
           stroke: 'transparent'
         }"
