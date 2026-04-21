@@ -9,6 +9,7 @@
     <main>
       <NuxtPage :transition="{
         name: 'fade',
+        mode: 'out-in'
         }" />
     </main>
 
@@ -34,6 +35,9 @@ useRouter().afterEach(() => {
 .v-app {
   width: 100%;
   overflow: hidden;
+  box-sizing: border-box;
+  padding-top: var(--app-header-height);
+  padding-bottom: var(--app-footer-height);
 }
 
 .v-app__header {
