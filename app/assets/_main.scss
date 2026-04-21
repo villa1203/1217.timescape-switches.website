@@ -18,7 +18,7 @@
 
   --app-gutter: 1rem;
 
-  --app-row-gap: 15rem;
+  --app-row-gap: 1rem;
 }
 
 html {
@@ -31,6 +31,7 @@ body {
   font-size: 1rem;
   line-height: 100%;
   user-select: none;
+  color: var(--app-color-primary);
 }
 
 button, .app-button {
