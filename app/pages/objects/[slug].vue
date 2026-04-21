@@ -1,15 +1,17 @@
 <template>
   <main class="v-slug">
-    <div class="app-grid app-grid--align-center v-slug__layout">
+    <div class="app-grid app-grid--align-start v-slug__layout">
 
       <div class="app-grid__col-6 v-slug__col-image">
-        <ImageHover
-          v-if="data?.result.cover_front[0] && data?.result.cover_back[0]"
-          :src="data.result.cover_front[0].xxl.url"
-          :src-hover="data.result.cover_back[0].xxl.url"
-          :alt="data.result.cover_front[0].alt ?? data.result.title"
-          :blob-size="400"
-        />
+        <div class="v-slug__col-image__wrapper">
+          <ImageHover
+            v-if="data?.result.cover_front[0] && data?.result.cover_back[0]"
+            :src="data.result.cover_front[0].xxl.url"
+            :src-hover="data.result.cover_back[0].xxl.url"
+            :alt="data.result.cover_front[0].alt ?? data.result.title"
+            :blob-size="400"
+          />
+        </div>
       </div>
 
       <div class="app-grid__col-6 v-slug__col-text">
@@ -39,8 +41,7 @@
           </div>
         </div>
 
-        <div class="v-slug__content"
-             v-if="data?.result.content"
+        <div v-if="data?.result.content"
         >
           <Blocks
             :content="data.result.content"
@@ -90,43 +91,34 @@ const {data} = await useFetch<FetchData>('/api/CMS_KQLRequest', {
 
 
 <style lang="scss" scoped>
-.v-slug {
+.v-slug__layout {
+  min-height: 100vh;
+}
 
-  &__layout {
-    min-height: 100vh;
-  }
+.v-slug__col-image {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-  &__col-image {
-    position: sticky;
-    top: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-  }
+.v-slug__col-image__wrapper {
+  width: 30rem;
+}
 
-  &__col-text {
-    padding: 4rem 2rem;
-  }
+.v-slug__title {
+  margin-bottom: 0.5rem;
+}
 
-  &__title {
-    margin-bottom: 0.5rem;
-  }
+.v-slug__baseline {
+  margin-bottom: 2rem;
+  opacity: 0.6;
+}
 
-  &__baseline {
-    margin-bottom: 2rem;
-    opacity: 0.6;
-  }
-
-  &__meta {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-
-    dt {
-      opacity: 0.5;
-      white-space: nowrap;
-    }
-  }
+.v-slug__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 </style>
