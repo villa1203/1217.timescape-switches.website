@@ -1,6 +1,10 @@
 <template>
   <div class="scene-wrapper">
-    <canvas ref="canvasRef" class="scene-canvas" />
+    <!-- Base layer: X-ray view (always visible behind) -->
+    <canvas ref="xrayCanvasRef" class="scene-canvas xray-layer" />
+
+    <!-- Top layer: Normal white plastic with circular mask -->
+    <canvas ref="canvasRef" class="scene-canvas normal-layer" :style="maskStyle" />
 
     <!-- Loading state -->
     <Transition name="fade">
@@ -12,20 +16,95 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+
+/* ─────────────────────────── props ────────────────────────────────── */
+const props = defineProps({
+  // 'normal' | 'glass'
+  mode: {
+    type: String,
+    default: 'normal'
+  },
+  xrayRadius: {
+    type: Number,
+    default: 0.08  // Radius in normalized screen coordinates (0-1)
+  },
+  xrayBlur: {
+    type: Number,
+    default: 0.03  // Blur edge width
+  }
+})
 
 /* ─────────────────────────── refs & state ─────────────────────────── */
 const canvasRef = ref(null)
+const xrayCanvasRef = ref(null)
 const loading   = ref(true)
+const maskStyle = ref({})
 
 /* ─────────────────────────── three.js state ───────────────────────── */
-let THREE, GLTFLoader, scene, camera, renderer, model, animId
+let THREE, GLTFLoader, scene, xrayScene, camera, renderer, xrayRenderer, model, xrayModel, animId
 let isDragging = false, lastMouse = { x: 0, y: 0 }
 let rotVel = { x: 0, y: 0 }, autoRotate = true, autoRotateTimer = null
 let spherical = { theta: 0, phi: Math.PI / 2, radius: 5 }
 let modelSize = 1
 let minZoom = 0.5
 let maxZoom = 2
+
+/* ─────────────────────────── transparency state ────────────────────── */
+let normalMaterials = new Map()  // Store original materials
+let glassMaterials = new Map()   // Store glass versions
+
+/* ─────────────────────────── material management ───────────────────── */
+function switchToNormalMode() {
+  if (!model) return
+  // Restore original white plastic materials
+  model.traverse((child) => {
+    if (child.isMesh && normalMaterials.has(child)) {
+      child.material = normalMaterials.get(child)
+      // Enable transparency for X-ray effect
+      child.material.transparent = true
+    }
+  })
+}
+
+function switchToGlassMode() {
+  if (!model) return
+  model.traverse((child) => {
+    if (child.isMesh) {
+      if (!glassMaterials.has(child)) {
+        const originalMat = normalMaterials.get(child)
+        let glassMat
+
+        // Black parts become purple, everything else is frosted gray
+        if (originalMat && originalMat.color.getHex() === 0x000000) {
+          glassMat = new THREE.MeshStandardMaterial({
+            color: 0x8210c1,  // Purple for black parts
+            metalness: 0.0,
+            roughness: 0.7,
+            transparent: true,
+            opacity: 0.4,
+            side: THREE.DoubleSide,
+            depthWrite: false
+          })
+        } else {
+          glassMat = new THREE.MeshStandardMaterial({
+            color: 0xe0e0e0,  // Light gray frosted color
+            metalness: 0.0,
+            roughness: 0.7,   // High roughness for strong frosted effect
+            transparent: true,
+            opacity: 0.4,     // Semi-transparent frosted glass
+            side: THREE.DoubleSide,
+            depthWrite: false
+          })
+        }
+
+        glassMaterials.set(child, glassMat)
+      }
+      child.material = glassMaterials.get(child)
+    }
+  })
+}
+
 
 /* ─────────────────────────── init ────────────────────────────────── */
 async function init() {
@@ -35,18 +114,23 @@ async function init() {
   GLTFLoader = Loader
 
   const canvas = canvasRef.value
+  const xrayCanvas = xrayCanvasRef.value
   const W = canvas.clientWidth  || canvas.offsetWidth  || window.innerWidth
   const H = canvas.clientHeight || canvas.offsetHeight || window.innerHeight
 
-  /* Scene */
+  /* Normal Scene (white plastic) */
   scene = new THREE.Scene()
   scene.background = new THREE.Color(0xffffff)
 
-  /* Camera */
+  /* X-ray Scene (transparent with colored internals) */
+  xrayScene = new THREE.Scene()
+  xrayScene.background = new THREE.Color(0xffffff)
+
+  /* Shared Camera */
   camera = new THREE.PerspectiveCamera(75, W / H, 0.1, 200)
   updateCameraPosition()
 
-  /* Renderer */
+  /* Normal Renderer (top layer) */
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(W, H, false)
@@ -54,40 +138,48 @@ async function init() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.outputColorSpace = THREE.SRGBColorSpace
 
-  /* Lighting - Bright studio setup for white plastic */
-  const ambientLight = new THREE.AmbientLight(0xffffff, 1.0)
-  scene.add(ambientLight)
+  /* X-ray Renderer (bottom layer) */
+  xrayRenderer = new THREE.WebGLRenderer({ canvas: xrayCanvas, antialias: true, alpha: false })
+  xrayRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  xrayRenderer.setSize(W, H, false)
+  xrayRenderer.shadowMap.enabled = true
+  xrayRenderer.shadowMap.type = THREE.PCFSoftShadowMap
+  xrayRenderer.outputColorSpace = THREE.SRGBColorSpace
 
-  // Key light - main light from front (same side as camera)
-  const keyLight = new THREE.DirectionalLight(0xffffff, 2.5)
-  keyLight.position.set(0, 5, 10)  // In front, slightly above
-  keyLight.castShadow = true
-  keyLight.shadow.mapSize.width = 2048
-  keyLight.shadow.mapSize.height = 2048
-  keyLight.shadow.camera.near = 0.5
-  keyLight.shadow.camera.far = 50
-  keyLight.shadow.bias = -0.0001
-  scene.add(keyLight)
+  /* Lighting - Bright studio setup (add to both scenes) */
+  function addLights(targetScene) {
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.0)
+    targetScene.add(ambientLight)
 
-  // Fill light from left
-  const fillLight = new THREE.DirectionalLight(0xffffff, 1.5)
-  fillLight.position.set(-8, 3, 5)
-  scene.add(fillLight)
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.5)
+    keyLight.position.set(0, 5, 10)
+    keyLight.castShadow = true
+    keyLight.shadow.mapSize.width = 2048
+    keyLight.shadow.mapSize.height = 2048
+    keyLight.shadow.camera.near = 0.5
+    keyLight.shadow.camera.far = 50
+    keyLight.shadow.bias = -0.0001
+    targetScene.add(keyLight)
 
-  // Fill light from right
-  const rightLight = new THREE.DirectionalLight(0xffffff, 1.5)
-  rightLight.position.set(8, 3, 5)
-  scene.add(rightLight)
+    const fillLight = new THREE.DirectionalLight(0xffffff, 1.5)
+    fillLight.position.set(-8, 3, 5)
+    targetScene.add(fillLight)
 
-  // Top light
-  const topLight = new THREE.DirectionalLight(0xffffff, 1.2)
-  topLight.position.set(0, 10, 3)
-  scene.add(topLight)
+    const rightLight = new THREE.DirectionalLight(0xffffff, 1.5)
+    rightLight.position.set(8, 3, 5)
+    targetScene.add(rightLight)
 
-  // Slight back light for depth
-  const backLight = new THREE.DirectionalLight(0xffffff, 0.8)
-  backLight.position.set(0, 2, -8)
-  scene.add(backLight)
+    const topLight = new THREE.DirectionalLight(0xffffff, 1.2)
+    topLight.position.set(0, 10, 3)
+    targetScene.add(topLight)
+
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.8)
+    backLight.position.set(0, 2, -8)
+    targetScene.add(backLight)
+  }
+
+  addLights(scene)
+  addLights(xrayScene)
 
   /* Load GLB */
   const loader = new GLTFLoader()
@@ -95,15 +187,27 @@ async function init() {
     '/interrupteur.glb',
     (gltf) => {
       model = gltf.scene
+      xrayModel = gltf.scene.clone()  // Clone for x-ray layer
 
       // First pass: calculate bounding boxes to identify tiny parts
       const partSizes = new Map()
+      const xrayPartSizes = new Map()
+
       model.traverse((child) => {
         if (child.isMesh) {
           const box = new THREE.Box3().setFromObject(child)
           const size = box.getSize(new THREE.Vector3())
           const volume = size.x * size.y * size.z
           partSizes.set(child, volume)
+        }
+      })
+
+      xrayModel.traverse((child) => {
+        if (child.isMesh) {
+          const box = new THREE.Box3().setFromObject(child)
+          const size = box.getSize(new THREE.Vector3())
+          const volume = size.x * size.y * size.z
+          xrayPartSizes.set(child, volume)
         }
       })
 
@@ -123,83 +227,86 @@ async function init() {
         0xa8d8ea, // Light blue
       ]
       let colorIndex = 0
+      let xrayColorIndex = 0
 
-      // Second pass: apply materials
+      // Apply COLORED materials to normal model (top layer - what you see normally)
       model.traverse((child) => {
         if (child.isMesh) {
           child.castShadow = true
           child.receiveShadow = true
 
-          // Ensure geometry has proper normals
           if (child.geometry) {
             child.geometry.computeVertexNormals()
           }
 
           const originalMat = child.material
           const volume = partSizes.get(child)
-          let newMaterial
+          let normalMaterial
 
           // Tiny parts get colorful materials
           if (volume <= smallThreshold) {
-            newMaterial = new THREE.MeshStandardMaterial({
+            normalMaterial = new THREE.MeshStandardMaterial({
               color: tinyColors[colorIndex % tinyColors.length],
               metalness: 0,
               roughness: 0.4,
-              transparent: false,
-              opacity: 1.0,
-              side: THREE.DoubleSide,  // Render both sides to prevent see-through
-              depthWrite: true,
-              depthTest: true,
-              alphaTest: 0,
-              polygonOffset: true,
-              polygonOffsetFactor: 1,
-              polygonOffsetUnits: 1,
+              side: THREE.DoubleSide,
             })
             colorIndex++
           }
           // Originally metallic parts become black
           else if (originalMat.metalness === 1) {
-            newMaterial = new THREE.MeshStandardMaterial({
+            normalMaterial = new THREE.MeshStandardMaterial({
               color: 0x000000,
               metalness: 0,
               roughness: 0.5,
-              transparent: false,
-              opacity: 1.0,
-              side: THREE.DoubleSide,  // Render both sides to prevent see-through
-              depthWrite: true,
-              depthTest: true,
-              alphaTest: 0,
-              polygonOffset: true,
-              polygonOffsetFactor: 1,
-              polygonOffsetUnits: 1,
+              side: THREE.DoubleSide,
             })
           }
           // Everything else is white plastic
           else {
-            newMaterial = new THREE.MeshStandardMaterial({
+            normalMaterial = new THREE.MeshStandardMaterial({
               color: 0xffffff,
               metalness: 0,
               roughness: 0.4,
-              transparent: false,
-              opacity: 1.0,
-              side: THREE.DoubleSide,  // Render both sides to prevent see-through
-              depthWrite: true,
-              depthTest: true,
-              alphaTest: 0,
-              polygonOffset: true,
-              polygonOffsetFactor: 1,
-              polygonOffsetUnits: 1,
+              side: THREE.DoubleSide,
             })
           }
 
-          child.material = newMaterial
+          child.material = normalMaterial
+          normalMaterials.set(child, normalMaterial)
         }
       })
 
-      // Center the model
+      // Apply FROSTED GLASS to X-ray model (bottom layer - revealed through circle)
+      xrayModel.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true
+          child.receiveShadow = true
+
+          if (child.geometry) {
+            child.geometry.computeVertexNormals()
+          }
+
+          // All parts are frosted glass in X-ray view
+          const glassXrayMaterial = new THREE.MeshStandardMaterial({
+            color: 0xe0e0e0,  // Light gray frosted color
+            metalness: 0.0,
+            roughness: 0.7,   // High roughness for strong frosted effect
+            transparent: true,
+            opacity: 0.4,     // Semi-transparent frosted glass
+            side: THREE.DoubleSide,
+            depthWrite: false
+          })
+
+          child.material = glassXrayMaterial
+        }
+      })
+
+      // Center both models
       const box = new THREE.Box3().setFromObject(model)
       const center = box.getCenter(new THREE.Vector3())
       model.position.sub(center)
+      xrayModel.position.sub(center)
 
       // Calculate model size for zoom constraints
       const size = box.getSize(new THREE.Vector3())
@@ -211,7 +318,11 @@ async function init() {
       maxZoom = modelSize * 4    // Can't zoom out too far
 
       updateCameraPosition()
+
+      // Add models to their respective scenes
       scene.add(model)
+      xrayScene.add(xrayModel)
+
       loading.value = false
     },
     undefined,
@@ -262,7 +373,14 @@ function animate() {
     updateCameraPosition()
   }
 
-  renderer.render(scene, camera)
+  // Render both layers
+  if (props.mode === 'normal') {
+    xrayRenderer.render(xrayScene, camera)  // X-ray layer (bottom)
+    renderer.render(scene, camera)          // Normal layer (top with mask)
+  } else {
+    // In glass mode, only render normal scene
+    renderer.render(scene, camera)
+  }
 }
 
 /* ─────────────────────────── resize ───────────────────────────────── */
@@ -274,6 +392,9 @@ function onResize() {
   camera.aspect = W / H
   camera.updateProjectionMatrix()
   renderer.setSize(W, H, false)
+  if (xrayRenderer) {
+    xrayRenderer.setSize(W, H, false)
+  }
 }
 
 /* ─────────────────────────── mouse / touch ────────────────────────── */
@@ -285,12 +406,34 @@ function onMouseDown(e) {
 }
 
 function onMouseMove(e) {
-  if (!isDragging) return
-  const dx = e.clientX - lastMouse.x
-  const dy = e.clientY - lastMouse.y
-  rotVel.x = dx * 0.008
-  rotVel.y = dy * 0.008
-  lastMouse = { x: e.clientX, y: e.clientY }
+  // Handle rotation first
+  if (isDragging) {
+    const dx = e.clientX - lastMouse.x
+    const dy = e.clientY - lastMouse.y
+    rotVel.x = dx * 0.008
+    rotVel.y = dy * 0.008
+    lastMouse = { x: e.clientX, y: e.clientY }
+  }
+
+  // Update X-ray effect - apply circular CSS mask to top canvas
+  const canvas = canvasRef.value
+  if (canvas && props.mode === 'normal') {
+    const rect = canvas.getBoundingClientRect()
+    const mouseX = e.clientX - rect.left
+    const mouseY = e.clientY - rect.top
+
+    // Radius in pixels
+    const radiusPx = Math.min(rect.width, rect.height) * props.xrayRadius
+    const blurPx = Math.min(rect.width, rect.height) * props.xrayBlur
+
+    // Create radial gradient mask: transparent circle at mouse (reveals x-ray below), opaque everywhere else
+    maskStyle.value = {
+      maskImage: `radial-gradient(circle at ${mouseX}px ${mouseY}px, transparent 0px, transparent ${radiusPx - blurPx}px, black ${radiusPx}px, black 100%)`,
+      WebkitMaskImage: `radial-gradient(circle at ${mouseX}px ${mouseY}px, transparent 0px, transparent ${radiusPx - blurPx}px, black ${radiusPx}px, black 100%)`
+    }
+  } else {
+    maskStyle.value = {}
+  }
 }
 
 function onMouseUp() {
@@ -314,6 +457,20 @@ function onTouchMove(e) {
   onMouseMove({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })
 }
 
+/* ─────────────────────────── mode switching ───────────────────────── */
+watch(() => props.mode, (newMode) => {
+  if (!model) return
+
+  switch (newMode) {
+    case 'normal':
+      switchToNormalMode()
+      break
+    case 'glass':
+      switchToGlassMode()
+      break
+  }
+})
+
 /* ─────────────────────────── lifecycle ────────────────────────────── */
 onMounted(() => { init() })
 
@@ -321,8 +478,27 @@ onUnmounted(() => {
   cancelAnimationFrame(animId)
   window.removeEventListener('resize', onResize)
   if (renderer) renderer.dispose()
+  if (xrayRenderer) xrayRenderer.dispose()
+
+  // Dispose all materials
+  normalMaterials.forEach(mat => mat.dispose())
+  glassMaterials.forEach(mat => mat.dispose())
+
   if (model) {
     model.traverse((child) => {
+      if (child.geometry) child.geometry.dispose()
+      if (child.material) {
+        if (Array.isArray(child.material)) {
+          child.material.forEach(mat => mat.dispose())
+        } else {
+          child.material.dispose()
+        }
+      }
+    })
+  }
+
+  if (xrayModel) {
+    xrayModel.traverse((child) => {
       if (child.geometry) child.geometry.dispose()
       if (child.material) {
         if (Array.isArray(child.material)) {
@@ -350,6 +526,17 @@ onUnmounted(() => {
   display: block;
   width: 100%;
   height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.xray-layer {
+  z-index: 1;
+}
+
+.normal-layer {
+  z-index: 2;
 }
 
 /* ── Loader ──────────────────────────────────────────────────────────── */
@@ -379,4 +566,5 @@ onUnmounted(() => {
 /* ── Transitions ─────────────────────────────────────────────────────── */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
 </style>

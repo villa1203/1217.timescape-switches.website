@@ -79,13 +79,35 @@
         />
       </template>
     </AppLayoutColumns>
+
+    <!-- 3D Viewer Section -->
+    <div class="viewer-section">
+      <div class="viewer-controls">
+        <button
+          @click="viewerMode = 'normal'"
+          :class="{ active: viewerMode === 'normal' }"
+        >
+          Normal (hover to see inside)
+        </button>
+        <button
+          @click="viewerMode = 'glass'"
+          :class="{ active: viewerMode === 'glass' }"
+        >
+          Frosted Glass
+        </button>
+      </div>
+      <ThreeScene :mode="viewerMode" />
+    </div>
   </main>
 </template>
 
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import type {CMS_API_Response, CMS_BlockData} from "#shared/cms_api";
 import AppLayoutColumns from "~/components/AppLayoutColumns.vue";
+
+const viewerMode = ref('normal')
 
 type FetchData = CMS_API_Response & {
   "result": {
@@ -119,5 +141,73 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
 
 <style lang="scss" scoped>
 .v-info {
+
+.viewer-section {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+}
+
+.viewer-controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+  display: flex;
+  gap: 10px;
+}
+
+.viewer-controls button {
+  padding: 10px 20px;
+  background: white;
+  border: 2px solid #000;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.viewer-controls button:hover {
+  background: #f0f0f0;
+}
+
+.viewer-controls button.active {
+  background: #000;
+  color: #fff;
+}
 }
 </style>
+
+.viewer-section {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+}
+
+.viewer-controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+  display: flex;
+  gap: 10px;
+}
+
+.viewer-controls button {
+  padding: 10px 20px;
+  background: white;
+  border: 2px solid #000;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.viewer-controls button:hover {
+  background: #f0f0f0;
+}
+
+.viewer-controls button.active {
+  background: #000;
+  color: #fff;
+}
