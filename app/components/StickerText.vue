@@ -5,8 +5,8 @@ const props = defineProps<{
   text: string
   color?: string
   variant?: 'primary' | 'secondary'
-  strokeWidth?: number
-  fontSize?: number
+  stroke_width?: number
+  font_size?: number
 }>()
 
 const uid = useId()
@@ -20,8 +20,8 @@ const strokeColor = computed(() => {
 })
 const bgColor = '#ffffff'
 
-const svgWidth = computed(() => textWidth.value + (props.strokeWidth || 35) + 40)
-const svgHeight = computed(() => (props.fontSize || 50) * 1.5)
+const svgWidth = computed(() => textWidth.value + (props.stroke_width || 35) + 40)
+const svgHeight = computed(() => (props.font_size || 50) * 1.5 * props.text.split('\n').length)
 const viewBox = computed(() => `0 0 ${svgWidth.value} ${svgHeight.value}`)
 
 const updateWidth = () => {
@@ -36,7 +36,7 @@ onMounted(() => {
 })
 
 watch(() => props.text, () => {
-  setTimeout(updateWidth, 0)
+  updateWidth()
 })
 </script>
 
@@ -57,115 +57,155 @@ watch(() => props.text, () => {
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: strokeColor,
           stroke: strokeColor,
-          strokeWidth: `${strokeWidth || 35}px`
+          strokeWidth: `${stroke_width || 35}px`
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Glow blanc flou (ultra léger) -->
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: 'transparent',
           stroke: bgColor,
-          strokeWidth: `${(strokeWidth || 35) - 2}px`,
+          strokeWidth: `${(stroke_width || 35) - 2}px`,
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.15
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Glow blanc flou (très léger) -->
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: 'transparent',
           stroke: bgColor,
-          strokeWidth: `${(strokeWidth || 35) - 5}px`,
+          strokeWidth: `${(stroke_width || 35) - 5}px`,
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.3
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Glow blanc flou (léger) -->
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: 'transparent',
           stroke: bgColor,
-          strokeWidth: `${(strokeWidth || 35) - 8}px`,
+          strokeWidth: `${(stroke_width || 35) - 8}px`,
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.5
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Glow blanc flou (moyen) -->
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: 'transparent',
           stroke: bgColor,
-          strokeWidth: `${(strokeWidth || 35) - 12}px`,
+          strokeWidth: `${(stroke_width || 35) - 12}px`,
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.7
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Glow blanc flou (plus fort) -->
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: 'transparent',
           stroke: bgColor,
-          strokeWidth: `${(strokeWidth || 35) - 16}px`,
+          strokeWidth: `${(stroke_width || 35) - 16}px`,
           filter: `url(#glow-blur-${uid})`,
           opacity: 0.9
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Centre blanc propre -->
       <text
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: bgColor,
           stroke: bgColor,
-          strokeWidth: `${(strokeWidth || 35) - 20}px`
+          strokeWidth: `${(stroke_width || 35) - 20}px`
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
 
       <!-- Texte -->
       <text
         ref="textRef"
         class="svg-text"
         x="30"
-        :y="(fontSize || 50) * 1.1"
+        :y="(font_size || 50) * 1.1"
         :style="{
-          fontSize: `${fontSize || 50}px`,
+          fontSize: `${font_size || 50}px`,
           fill: strokeColor,
           stroke: 'transparent'
         }"
-      >{{ text }}</text>
+      >
+        <tspan v-for="(line, index) of text.split('\n')"
+               x="30"
+               :dy="`${1.2 * index}em`"
+        >{{ line }}</tspan>
+      </text>
     </svg>
   </span>
 </template>

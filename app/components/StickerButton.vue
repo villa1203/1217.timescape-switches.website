@@ -7,8 +7,8 @@ const props = defineProps<{
   href?: string
   color?: string
   hoverColor?: string
-  strokeWidth?: number
-  fontSize?: number
+  stroke_width?: number
+  font_size?: number
 }>()
 
 const isHovered = ref(false)
@@ -34,8 +34,8 @@ const activeColor = computed(() => {
     <StickerText
       :text="text"
       :color="activeColor"
-      :stroke-width="strokeWidth"
-      :font-size="fontSize"
+      :stroke_width="stroke_width"
+      :font_size="font_size"
     />
   </nuxt-link>
 
@@ -51,8 +51,8 @@ const activeColor = computed(() => {
     <StickerText
       :text="text"
       :color="activeColor"
-      :stroke-width="strokeWidth"
-      :font-size="fontSize"
+      :stroke_width="stroke_width"
+      :font_size="font_size"
     />
   </a>
 
@@ -65,8 +65,8 @@ const activeColor = computed(() => {
     <StickerText
       :text="text"
       :color="activeColor"
-      :stroke-width="strokeWidth"
-      :font-size="fontSize"
+      :stroke_width="stroke_width"
+      :font_size="font_size"
     />
   </button>
 </template>
@@ -81,9 +81,5 @@ const activeColor = computed(() => {
   cursor: pointer;
   text-decoration: none;
   transition: transform 0.2s ease;
-}
-
-.sticker-button:hover {
-  transform: scale(1.05);
 }
 </style>

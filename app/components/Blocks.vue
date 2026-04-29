@@ -11,6 +11,10 @@
         <BlockImage :block_data="block"/>
       </template>
 
+      <template v-else-if="block.type === 'gallery'">
+        <BlockGallery :block_data="block"/>
+      </template>
+
       <template v-else-if="block.type === 'text'">
         <BlockText :block_data="block"/>
       </template>
@@ -36,19 +40,6 @@
         <BlockProfiles :block_data="block"/>
       </template>
 
-      <template v-else-if="block.type === 'sketch_text'">
-        <div style="margin-top: calc( -1 * var(--app-row-gap)); margin-bottom: calc( -1 * var(--app-row-gap))">
-          <iframe
-            style="
-              border: none;
-              width: 100%;
-              height: 100vh;
-            "
-            src="/sketches/intro/index.html"/>
-        </div>
-      </template>
-
-
     </template>
   </div>
 </template>
@@ -67,7 +58,9 @@
 <style scoped lang="scss">
 .app-blocks {
   display: flex;
-  flex-direction: column;
-  gap: var(--app-row-gap);
+  flex-direction: row;
+  row-gap: var(--app-row-gap);
+  column-gap: var(--app-grid-gap);
+  flex-wrap: wrap;
 }
 </style>

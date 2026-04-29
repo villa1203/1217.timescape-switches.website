@@ -1,17 +1,12 @@
 <template>
-  <main class="v-index"
+  <main class="v-info"
   >
-    <P5Background />
-    <div class="app-grid app-grid--align-center app-grid--justify-center"
-    >
-      <div class="app-grid__col-12">
-        <div class="v-index__intro-container">
-          <div class="app-grid app-grid--align-center app-grid--justify-center">
-            <DottedCircles class="hero-circles"/>
-          </div>
-          <div class="app-grid app-grid--align-center app-grid--justify-center">
+    <AppLayoutColumns>
+      <template v-slot:first>
 
-            <svg width="1382" height="559" viewBox="0 0 1382 559" fill="none" xmlns="http://www.w3.org/2000/svg"
+        <div class="app-grid app-grid--justify-center">
+          <div class="app-grid__col-8" >
+            <svg style="width: 100%" width="1382" height="559" viewBox="0 0 1382 559" fill="none" xmlns="http://www.w3.org/2000/svg"
                  class="hero-svg"
             >
               <g filter="url(#filter0_i_701_965)">
@@ -71,78 +66,58 @@
             </svg>
           </div>
         </div>
-      </div>
-    </div>
+
+        <Blocks
+          v-if="data?.result.content_secondary"
+          :content="data?.result.content_secondary"
+        />
+      </template>
+      <template v-slot:second>
+        <Blocks
+          v-if="data?.result.content"
+          :content="data?.result.content"
+        />
+      </template>
+    </AppLayoutColumns>
   </main>
 </template>
 
 
 <script setup lang="ts">
-import type {CMS_API_ImageInstance, CMS_API_Response, CMS_BlockData} from "#shared/cms_api";
-
-const indexToShow = ref(0)
+import type {CMS_API_Response, CMS_BlockData} from "#shared/cms_api";
+import AppLayoutColumns from "~/components/AppLayoutColumns.vue";
 
 type FetchData = CMS_API_Response & {
   "result": {
     "title": string,
     "slug": string,
-    cover_back: CMS_API_ImageInstance,
-    cover_front: CMS_API_ImageInstance,
     content: CMS_BlockData[]
-  }[]
+    content_secondary: CMS_BlockData[]
+  }
 }
-
 
 const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
   lazy: true,
   method: 'POST',
-  body: {}
+  body: {
+    query: `page('infos')`,
+    select: {
+      title: true,
+      slug: true,
+      content: {
+        query: `page.content.content.toBlocks`,
+      },
+      content_secondary: {
+        query: `page.content.content_secondary.toBlocks`,
+      },
+    }
+  }
 })
+
 </script>
 
 
 <style lang="scss" scoped>
-.v-index__intro-container {
-  position: fixed;
-  width: 100%;
-  height: calc( 100% - var(--app-header-height) - var(--app-footer-height));
-
-  > * {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 100%;
-    height: 100%;
-    transform: translate(-50%, -50%);
-  }
-}
-
-.hero {
-  position: relative;
-  width: 100%;
-  padding: 4rem 2rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.hero-circles {
-  position: absolute;
-  width: 90%; 
-  height: auto;
-  z-index: 0;
-}
-
-.hero-svg {
-  position: relative;
-  width: 80%;
-  height: auto;
-  z-index: 1;
-}
-
-.test-hover {
-  padding: 2rem;
-  max-width: 800px;
-  margin: 0 auto;
+.v-info {
 }
 </style>

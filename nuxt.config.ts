@@ -13,6 +13,12 @@ export default defineNuxtConfig({
     scan: false,
   },
 
+  nitro: {
+    prerender: {
+      routes: ['/'],
+    },
+  },
+
   runtimeConfig: {
     secret_API_AUTH_EMAIL: process.env.API_AUTH_EMAIL,
     secret_API_AUTH_PASSWORD: process.env.API_AUTH_PASSWORD,

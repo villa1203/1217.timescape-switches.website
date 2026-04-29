@@ -4,7 +4,8 @@
     >
       <button class="v-app-project-preview--list__title">{{title}}</button>
       <img class="v-app-project-preview--list__cover"
-           :src="image.reg.url"
+           v-if="image?.large.url"
+           :src="image.large.url"
       />
     </nuxt-link>
 </template>
@@ -16,10 +17,10 @@ import { defineProps } from 'vue'
 import type {CMS_API_ImageInstance} from "#shared/cms_api";
 
 defineProps<{
-  image: CMS_API_ImageInstance,
-  title: string,
-  baseline: string,
-  slug: string,
+  image?: CMS_API_ImageInstance,
+  title?: string,
+  baseline?: string,
+  slug?: string,
 }>()
 </script>
 

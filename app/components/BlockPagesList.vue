@@ -1,5 +1,5 @@
 <template>
-  <div class="app-with-padding--left-right">
+  <div class="v-block block-pages-list app-with-padding--left-right">
     <h2>{{block_data.content.title}}</h2>
 
     <AppProjectsPreview
@@ -16,3 +16,10 @@ defineProps<{
   block_data: CMS_BlockPages,
 }>()
 </script>
+
+<style scoped lang="scss">
+.block-pages-list {
+  width: 100%;
+  box-sizing: border-box;
+}
+</style>

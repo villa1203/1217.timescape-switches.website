@@ -1,5 +1,5 @@
 <template>
-	<section class="block-article-heading app-grid app-grid--align-start" >
+	<section class="v-block block-article-heading app-grid app-grid--align-start" >
 
     <div class="app-grid app-grid--align-start app-grid--justify-center">
       <header v-if="block_data.content.title"
@@ -7,7 +7,7 @@
                 'app-grid__col-6': block_data.content.text
               }"
       >
-        <div class="app-grid app-grid--align-start app-grid--justify-center">
+        <div class="app-grid app-grid--align-start app-grid--justify-center app-rm-child-margin">
           <h2
             :class="{
                 'app-text-align-center': !block_data.content.text
@@ -40,6 +40,7 @@
 <style scoped lang="scss">
 .block-article-heading {
   width: 100%;
+  box-sizing: border-box;
   min-height: calc(100vh - 20rem);
   display: flex;
   justify-content: center;

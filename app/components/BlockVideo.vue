@@ -1,5 +1,12 @@
 <template>
-	<section class="v-block-video">
+	<section class="v-block block-video"
+           :class="{
+              'is-full':      block_data.content.toggle_is_full === 'true',
+              'has-gap-left': block_data.content.toggle_gap_left === 'true',
+              'has-ratio-1-1': block_data.content.toggle_ratio_1_1 === 'true',
+              'is-large':     block_data.content.toggle_is_large === 'true',
+           }"
+  >
 		<header v-if="block_data.content.title">
 			<h2>{{ block_data.content.title }}</h2>
 		</header>
@@ -23,7 +30,6 @@
                muted
                autoplay
                :src="block_data.content.video_file[0].url"
-               class="app-video__cover"
         ></video>
       </div>
 
@@ -56,14 +62,47 @@ const props = defineProps<{
 
 
 <style lang="scss" scoped>
-.v-block-video {
-  figure {
-    margin: 0;
+.block-video {
+  width: calc( ((100% + var(--app-grid-gap) ) / 2) - var(--app-grid-gap));
+  box-sizing: border-box;
+  overflow: hidden;
+
+  &.has-gap-left {
+    margin-left: 50%;
+  }
+
+  &.is-full {
+    width: 100%;
+
+    video {
+      height: 100vh;
+      object-fit: cover;
+    }
+  }
+
+  &.is-large {
+    width: 100%;
+    padding-left:   calc(var(--app-grid-gap) + 100% / 12 * 1);
+    padding-right:  calc(var(--app-grid-gap) + 100% / 12 * 1);
   }
 }
 
-.v-block-video__video {
+figure {
+  box-sizing: border-box;
   display: block;
+  width: 100%;
+  margin: 0;
 }
 
+video {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  margin: 0;
+
+  .has-ratio-1-1 & {
+    aspect-ratio: 1/1;
+    object-fit: cover;
+  }
+}
 </style>

@@ -2,14 +2,21 @@
     <nav class="v-nav app-with-padding--left-right app-with-padding--top-bottom"
     >
       <div class="app-grid app-grid--justify-between">
+        <div>
+          <StickerButton text="Weekly Timescape in 2 Days, 3 hours" to="/" :font_size="24" :stroke_width="20" />
+        </div>
+        <div>
+          <div class="app-grid">
+            <div>
+              <StickerButton text="Research" to="/research" :font_size="24" :stroke_width="20" />
+            </div>
 
-        <nuxt-link to="/" class="app-button">logo</nuxt-link>
+            <div>
+              <StickerButton text="Info" to="/info" :font_size="24" :stroke_width="20" />
+            </div>
+          </div>
+        </div>
 
-        <nav class="app-grid app-grid--justify-end">
-          <nuxt-link class="app-button" to="/works">works</nuxt-link>
-          <nuxt-link class="app-button" to="/office">office</nuxt-link>
-          <nuxt-link class="app-button" to="/research">research</nuxt-link>
-        </nav>
 
       </div>
     </nav>
@@ -20,11 +27,12 @@
 
 
 <script setup lang="ts">
-import { defineProps } from 'vue'
+import UIOpen from "~/components/UIOpen.vue";
 
-const props = defineProps<{
-    message?: string
-}>()
+const infosIsOpen = ref(false)
+
+
+
 </script>
 
 
@@ -34,5 +42,28 @@ const props = defineProps<{
 <style lang="scss" scoped >
 .v-nav {
   width: 100%;
+  position: relative;
+}
+
+.v-nav__infos {
+  position: absolute;
+  top: var(--app-gutter);
+  left: var(--app-gutter);
+  width: 30rem;
+  background: hsla(0, 0%, 0%, 0.25);
+  border-radius: .75rem;
+  color: white;
+  padding: 5rem .75rem .75rem;
+  z-index: 0;
+}
+
+.infos-is-open {
+  background: transparent;
+  transition: none;
+  backdrop-filter: none;
+
+  .toggle-infos {
+    transform: rotate(45deg);
+  }
 }
 </style>

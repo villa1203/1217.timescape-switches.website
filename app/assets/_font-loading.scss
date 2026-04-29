@@ -1,0 +1,17 @@
+@font-face {
+  font-family: 'ES Allianz';
+  src:  url('fonts/ES_Allianz/woff2/ESAllianz-Book.woff2') format('woff2'),
+        url('fonts/ES_Allianz/woff/ESAllianz-Book.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Répétez pour les autres graisses (bold, italic, etc.) */
+@font-face {
+  font-family: 'ES Allianz';
+  src:  url('fonts/ES_Allianz/woff2/ESAllianz-Bold.woff2') format('woff2'),
+        url('fonts/ES_Allianz/woff/ESAllianz-Bold.woff') format('woff');
+  font-weight: bold;
+  font-display: swap;
+}

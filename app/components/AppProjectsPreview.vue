@@ -12,6 +12,7 @@
         >
           <AppProjectPreview
             :image="page.cover"
+            :covers_video="page.covers_video?.url"
             :title="page.title"
             :baseline="page.baseline"
             :slug="page.slug"

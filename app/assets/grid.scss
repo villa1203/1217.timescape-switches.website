@@ -136,6 +136,8 @@
   .app-grid__col-offset-10 {width:  calc( (((100% + var(--app-grid-gap) ) / 12 ) * 10 ) - var(--app-grid-gap)   );}
   .app-grid__col-offset-11 {width:  calc( (((100% + var(--app-grid-gap) ) / 12 ) * 11 ) - var(--app-grid-gap)   );}
   .app-grid__col-offset-12 {width:  calc( (((100% + var(--app-grid-gap) ) / 12 ) * 12 ) - var(--app-grid-gap)   );}
+
+  .app-grid__shrink-0 {flex-shrink: 0;}
 }
 
 .app-no-margin {

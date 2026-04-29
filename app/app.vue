@@ -1,13 +1,19 @@
 <template>
   <div class="v-app"
   >
+
     <div class="v-app__header app-grid">
       <AppNav/>
     </div>
+
     <main>
-      <NuxtPage/>
+      <NuxtPage :transition="{
+        name: 'fade',
+        mode: 'out-in'
+        }" />
     </main>
-    <div>
+
+    <div class="v-app__footer app-grid">
       <AppFooter/>
     </div>
   </div>
@@ -16,10 +22,24 @@
 
 <script setup lang="ts">
 
+useRouter().afterEach(() => {
+  if (import.meta.client) {
+    document.body.classList.remove('v-block--is-visible')
+  }
+})
+
 </script>
 
 
 <style lang="scss" scoped>
+.v-app {
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding-top: var(--app-header-height);
+  padding-bottom: var(--app-footer-height);
+}
+
 .v-app__header {
   overflow-x: hidden;
   position: fixed;
@@ -29,4 +49,21 @@
   box-sizing: border-box;
   z-index: 100;
 }
+
+.v-app-footer {
+  position: fixed;
+  bottom: 0;
+}
+
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 </style>

@@ -3,9 +3,9 @@
 @use "./typo";
 
 :root {
-  --app-color-primary: hsla(66, 100%, 58%, 1);
-  //--app-color-secondary: #ff00ff;
-  //--app-color-ternary: #ebd7c8;
+  --app-color-primary: #820FC1;
+  --app-color-secondary: #FF6600;
+  --app-color-ternary: #ebd7c8;
   --app-color-light: #FFF;
   --app-color-dark: #000;
 
@@ -18,11 +18,11 @@
 
   --app-gutter: 1rem;
 
-  --app-row-gap: 15rem;
+  --app-row-gap: 1rem;
 }
 
 html {
-  font-family: 'ES Allianz', sans-serif;
+  font-family: 'Sligoil', sans-serif;
   font-size: 16px;
 }
 
@@ -30,6 +30,8 @@ body {
   font-weight: 400;
   font-size: 1rem;
   line-height: 100%;
+  user-select: none;
+  color: var(--app-color-primary);
 }
 
 button, .app-button {
@@ -58,7 +60,3 @@ button, .app-button {
 }
 
 //-------//
-
-
-
-

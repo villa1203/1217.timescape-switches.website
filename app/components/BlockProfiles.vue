@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="v-block block-profiles">
     {{block_data.content.profiles_list}}
     <div v-for="profile of block_data.content.profiles_list">
       <img
@@ -25,3 +25,10 @@ defineProps<{
   block_data: CMS_BlockProfiles,
 }>()
 </script>
+
+<style scoped lang="scss">
+.block-profiles {
+  width: 100%;
+  box-sizing: border-box;
+}
+</style>
