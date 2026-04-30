@@ -166,29 +166,20 @@ function switchToGlassMode() {
     if (child.isMesh) {
       if (!glassMaterials.has(child)) {
         const originalMat = normalMaterials.get(child)
-        let glassMat
+        const isBlackPart = originalMat && originalMat.color.getHex() === 0x000000
 
-        if (originalMat && originalMat.color.getHex() === 0x000000) {
-          glassMat = new THREE.MeshStandardMaterial({
-            color: 0x8210c1,
-            metalness: 0.0,
-            roughness: 0.7,
-            transparent: true,
-            opacity: 0.4,
-            side: THREE.DoubleSide,
-            depthWrite: false
-          })
-        } else {
-          glassMat = new THREE.MeshStandardMaterial({
-            color: 0xe0e0e0,
-            metalness: 0.0,
-            roughness: 0.7,
-            transparent: true,
-            opacity: 0.4,
-            side: THREE.DoubleSide,
-            depthWrite: false
-          })
-        }
+        const purpleColor = 0x8210c1
+        const glassMat = new THREE.MeshStandardMaterial({
+          color: isBlackPart ? purpleColor : 0xe0e0e0,
+          metalness: 0.0,
+          roughness: 0.7,
+          transparent: true,
+          opacity: 0.4,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          emissive: isBlackPart ? purpleColor : 0x000000,
+          emissiveIntensity: isBlackPart ? 0.8 : 0
+        })
 
         glassMaterials.set(child, glassMat)
       }
@@ -303,6 +294,12 @@ async function init() {
         }
       })
 
+      // Define colors for each part (matches ThreeSceneAdvanced tinyColors)
+      const tinyColors = [
+        0x000000, 0x000000, 0xffffff, 0xffffff,
+        0xffffff, 0xffffff, 0xffffff, 0xa8d8ea,
+      ]
+
       // Create materials for normal scene using purpleParts constant
       for (let i = 0; i < normalMeshes.length; i++) {
         const child = normalMeshes[i]
@@ -313,12 +310,12 @@ async function init() {
           child.geometry.computeVertexNormals()
         }
 
-        const isPurplePart = purpleParts.includes(i)
+        const color = tinyColors[i % tinyColors.length]
 
         const normalMaterial = new THREE.MeshStandardMaterial({
-          color: isPurplePart ? 0x000000 : 0xffffff,  // Black for purple parts, white for rest
+          color: color,
           metalness: 0.1,
-          roughness: isPurplePart ? 0.4 : 0.35,
+          roughness: 0.3,
           side: THREE.DoubleSide,
           envMapIntensity: 1.0
         })
@@ -336,7 +333,7 @@ async function init() {
         if (child.isMesh) xrayMeshes.push(child)
       })
 
-      // Create frosted glass X-ray materials using purpleParts constant
+      // Create frosted glass X-ray materials (matches ThreeSceneAdvanced logic)
       for (let i = 0; i < xrayMeshes.length; i++) {
         const child = xrayMeshes[i]
         child.castShadow = true
@@ -346,20 +343,23 @@ async function init() {
           child.geometry.computeVertexNormals()
         }
 
-        const isPurple = purpleParts.includes(i)
+        // Get corresponding normal material by index
+        const normalMesh = normalMeshes[i]
+        const normalMaterial = normalMaterials.get(normalMesh)
+        const isBlackPart = normalMaterial && normalMaterial.color.getHex() === 0x000000
 
-        // Create frosted glass material with emissive glow for purple parts
+        // Create frosted glass material with emissive glow for black parts
         const purpleColor = 0x8210c1
         const xrayMat = new THREE.MeshStandardMaterial({
-          color: isPurple ? purpleColor : 0xe0e0e0,  // Purple for specified parts, gray for rest
+          color: isBlackPart ? purpleColor : 0xe0e0e0,  // Purple for black parts, gray for rest
           metalness: 0.0,
           roughness: 0.7,
           transparent: true,
           opacity: 0.4,
           side: THREE.DoubleSide,
           depthWrite: false,
-          emissive: isPurple ? purpleColor : 0x000000,  // Glowing purple
-          emissiveIntensity: isPurple ? 0.8 : 0.0
+          emissive: isBlackPart ? purpleColor : 0x000000,  // Glowing purple for black parts
+          emissiveIntensity: isBlackPart ? 0.8 : 0.0
         })
 
         child.material = xrayMat
