@@ -301,32 +301,35 @@ async function init() {
         xrayMaterials.set(child, xrayMaterial)
       }
 
-      // Center both models
-      centerModel(model)
-      centerModel(xrayModel)
+      // Center models
+      const box = new THREE.Box3().setFromObject(model)
+      const center = box.getCenter(new THREE.Vector3())
+      model.position.sub(center)
+      xrayModel.position.sub(center)
 
+      const size = box.getSize(new THREE.Vector3())
+      modelSize = Math.max(size.x, size.y, size.z)
+
+      spherical.radius = modelSize * 2
+      minZoom = modelSize * 1.2
+      maxZoom = modelSize * 4
+
+      updateCameraPosition()
+
+      // Add to scenes
       normalScene.add(model)
       xrayScene.add(xrayModel)
-
-      // Expose model for inspection
-      if (import.meta.env.DEV) {
-        window.__THREE_MODEL__ = model
-        console.log('🔍 Elevator model loaded! Use inspector tools in console.')
-      }
 
       loading.value = false
 
       // Initialize fluid simulation
       initFluidSimulation()
 
-      // Start animation
       animate()
     },
-    (progress) => {
-      console.log('⏳ Loading progress:', (progress.loaded / progress.total * 100).toFixed(0) + '%')
-    },
+    undefined,
     (error) => {
-      console.error('❌ Error loading elevator.glb:', error)
+      console.error('Error loading GLB:', error)
       loading.value = false
     }
   )
@@ -341,22 +344,6 @@ async function init() {
   canvas.addEventListener('touchstart', onTouchStart, { passive: false })
   canvas.addEventListener('touchmove', onTouchMove, { passive: false })
   canvas.addEventListener('touchend', onMouseUp)
-}
-
-function centerModel(m) {
-  const box = new THREE.Box3().setFromObject(m)
-  const center = box.getCenter(new THREE.Vector3())
-  m.position.sub(center)
-
-  const size = box.getSize(new THREE.Vector3())
-  modelSize = Math.max(size.x, size.y, size.z)
-
-  // Set camera distance (closer zoom range)
-  spherical.radius = modelSize * 2.0
-  minZoom = modelSize * 1.2
-  maxZoom = modelSize * 4.0
-
-  console.log('📏 Model centered. Size:', modelSize.toFixed(2), 'Camera distance:', spherical.radius.toFixed(2))
 }
 
 function updateCameraPosition() {
