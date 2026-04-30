@@ -53,10 +53,6 @@ let normalMaterials = new Map()
 let xrayMaterials = new Map()
 let glassMaterials = new Map()
 
-// Purple parts indices - parts with black color (0x000000) that glow purple in X-ray
-// Based on the tinyColors array: index 0 and 1 are black (mechanism parts)
-const purpleParts = [0, 1]  // Black mechanism parts that become purple in X-ray
-
 /* ─────────────────────────── custom shaders ───────────────────────── */
 const xrayVertexShader = `
 varying vec3 vNormal;
@@ -286,56 +282,87 @@ async function init() {
     (gltf) => {
       model = gltf.scene
 
-      // Collect all meshes
-      const normalMeshes = []
+      // Calculate part sizes (matches ThreeSceneAdvanced logic)
+      const partSizes = new Map()
       model.traverse((child) => {
         if (child.isMesh) {
-          normalMeshes.push(child)
+          const box = new THREE.Box3().setFromObject(child)
+          const size = box.getSize(new THREE.Vector3())
+          const volume = size.x * size.y * size.z
+          partSizes.set(child, volume)
         }
       })
 
-      // Define colors for each part (matches ThreeSceneAdvanced tinyColors)
+      const volumes = Array.from(partSizes.values()).sort((a, b) => a - b)
+      const smallThreshold = volumes[Math.floor(volumes.length * 0.3)]
+
       const tinyColors = [
-        0x000000, 0x000000, 0xffffff, 0xffffff,
+        0x000000, 0x00ff00, 0xffffff, 0xffffff,
         0xffffff, 0xffffff, 0xffffff, 0xa8d8ea,
       ]
+      let colorIndex = 0
 
-      // Create materials for normal scene using purpleParts constant
-      for (let i = 0; i < normalMeshes.length; i++) {
-        const child = normalMeshes[i]
-        child.castShadow = true
-        child.receiveShadow = true
+      // Create materials for normal scene (exact ThreeSceneAdvanced logic)
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true
+          child.receiveShadow = true
 
-        if (child.geometry) {
-          child.geometry.computeVertexNormals()
+          if (child.geometry) {
+            child.geometry.computeVertexNormals()
+          }
+
+          const originalMat = child.material
+          const volume = partSizes.get(child)
+          let normalMaterial
+
+          if (volume <= smallThreshold) {
+            normalMaterial = new THREE.MeshStandardMaterial({
+              color: tinyColors[colorIndex % tinyColors.length],
+              metalness: 0.1,
+              roughness: 0.3,
+              side: THREE.DoubleSide,
+              envMapIntensity: 1.0
+            })
+            colorIndex++
+          } else if (originalMat.metalness === 1) {
+            normalMaterial = new THREE.MeshStandardMaterial({
+              color: 0x000000,
+              metalness: 0.2,
+              roughness: 0.4,
+              side: THREE.DoubleSide,
+            })
+          } else {
+            normalMaterial = new THREE.MeshStandardMaterial({
+              color: 0xffffff,
+              metalness: 0.0,
+              roughness: 0.35,
+              side: THREE.DoubleSide,
+            })
+          }
+
+          child.material = normalMaterial
+          normalMaterials.set(child, normalMaterial)
         }
-
-        const color = tinyColors[i % tinyColors.length]
-
-        const normalMaterial = new THREE.MeshStandardMaterial({
-          color: color,
-          metalness: 0.1,
-          roughness: 0.3,
-          side: THREE.DoubleSide,
-          envMapIntensity: 1.0
-        })
-
-        child.material = normalMaterial
-        normalMaterials.set(child, normalMaterial)
-      }
+      })
 
       // Clone model for X-ray scene
       const xrayModel = model.clone()
 
-      // Collect xray meshes
+      // Create parallel arrays for matching meshes
+      const normalMeshes = []
       const xrayMeshes = []
+
+      model.traverse((child) => {
+        if (child.isMesh) normalMeshes.push(child)
+      })
+
       xrayModel.traverse((child) => {
         if (child.isMesh) xrayMeshes.push(child)
       })
 
-      // Create frosted glass X-ray materials (matches ThreeSceneAdvanced logic)
-      for (let i = 0; i < xrayMeshes.length; i++) {
-        const child = xrayMeshes[i]
+      // Create frosted glass X-ray materials
+      xrayMeshes.forEach((child, index) => {
         child.castShadow = true
         child.receiveShadow = true
 
@@ -344,11 +371,11 @@ async function init() {
         }
 
         // Get corresponding normal material by index
-        const normalMesh = normalMeshes[i]
+        const normalMesh = normalMeshes[index]
         const normalMaterial = normalMaterials.get(normalMesh)
         const isBlackPart = normalMaterial && normalMaterial.color.getHex() === 0x000000
 
-        // Create frosted glass material with emissive glow for black parts
+        // Create frosted glass material with emissive glow for purple parts
         const purpleColor = 0x8210c1
         const xrayMat = new THREE.MeshStandardMaterial({
           color: isBlackPart ? purpleColor : 0xe0e0e0,  // Purple for black parts, gray for rest
@@ -364,7 +391,7 @@ async function init() {
 
         child.material = xrayMat
         xrayMaterials.set(child, xrayMat)
-      }
+      })
 
       // Center models
       const box = new THREE.Box3().setFromObject(model)
