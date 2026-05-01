@@ -108,6 +108,7 @@ import type {CMS_API_Response, CMS_BlockData} from "#shared/cms_api";
 import AppLayoutColumns from "~/components/AppLayoutColumns.vue";
 
 const viewerMode = ref('normal')
+const viewerVersion = ref("standard") // "standard" or "advanced"
 
 type FetchData = CMS_API_Response & {
   "result": {

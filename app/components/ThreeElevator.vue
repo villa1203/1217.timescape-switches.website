@@ -48,11 +48,13 @@ const fluidTrail = []
 const maxTrailLength = 12
 let animTime = 0  // For organic edge animation
 
-/* ─────────────────────────── material storage ────────────────────────── */
+/* ─────────────────────────── material storage ─────────────────────── */
 let normalMaterials = new Map()
 let xrayMaterials = new Map()
 let glassMaterials = new Map()
-let purpleParts = [11,12,28,29,30,31,32]  // Store purple parts indices
+
+/* ─────────────────────────── part color assignments ───────────────── */
+let purpleParts = [11,12,28,29,30,31,32]  // Parts that glow purple in X-ray mode
 
 /* ─────────────────────────── custom shaders ───────────────────────── */
 const compositingFragmentShader = `
@@ -108,17 +110,11 @@ void main() {
 }
 `
 
-/* ─────────────────────────── init scene ─────────────────────────────── */
+/* ─────────────────────────── init ────────────────────────────────── */
 async function init() {
-  // Dynamic import — safe for Nuxt SSR
   THREE = await import('three').then(m => m.default ?? m)
   const { GLTFLoader: Loader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
   GLTFLoader = Loader
-
-  // Expose THREE globally for inspector
-  if (import.meta.env.DEV) {
-    window.__THREE__ = THREE
-  }
 
   canvas = canvasRef.value
   const W = canvas.clientWidth || canvas.offsetWidth || window.innerWidth
@@ -220,11 +216,9 @@ async function init() {
 
   /* Load GLB model */
   const loader = new GLTFLoader()
-  console.log('🔄 Starting to load elevator.glb...')
   loader.load(
     '/elevator.glb',
     (gltf) => {
-      console.log('✅ Elevator GLB loaded successfully!')
       model = gltf.scene
 
       // Collect meshes
@@ -245,22 +239,19 @@ async function init() {
           child.geometry.computeVertexNormals()
         }
 
-        // All parts are metallic, purple parts just slightly darker shade
         const isPurplePart = purpleParts.includes(i)
 
         const normalMaterial = new THREE.MeshStandardMaterial({
-          color: isPurplePart ? 0xe8e8e8 : 0xffffff,  // Very light gray for purple parts, pure white for rest
-          metalness: 0.85,  // Very high metalness for shiny metal
-          roughness: isPurplePart ? 0.25 : 0.15,  // Slightly rougher for purple parts
+          color: isPurplePart ? 0xe8e8e8 : 0xffffff,
+          metalness: 0.85,
+          roughness: isPurplePart ? 0.25 : 0.15,
           side: THREE.DoubleSide,
-          envMap: envMap,  // Add environment map for reflections
-          envMapIntensity: 0.4  // Lower intensity for cleaner reflections
+          envMap: envMap,
+          envMapIntensity: 0.4
         })
 
         child.material = normalMaterial
         normalMaterials.set(child, normalMaterial)
-
-        console.log(`Part ${i}: ${child.name || 'unnamed'} = ${isPurplePart ? 'Dark Metal (→ Purple X-ray)' : 'Light Metal'}`)
       }
 
       // Clone for X-ray scene
@@ -291,10 +282,10 @@ async function init() {
           roughness: 0.7,
           transparent: true,
           opacity: 0.4,
-          emissive: isPurple ? 0x8210c1 : 0x000000,
-          emissiveIntensity: isPurple ? 0.8 : 0,
           side: THREE.DoubleSide,
           depthWrite: false,
+          emissive: isPurple ? 0x8210c1 : 0x000000,
+          emissiveIntensity: isPurple ? 0.8 : 0
         })
 
         child.material = xrayMaterial
@@ -310,7 +301,7 @@ async function init() {
       const size = box.getSize(new THREE.Vector3())
       modelSize = Math.max(size.x, size.y, size.z)
 
-      spherical.radius = modelSize * 2
+      spherical.radius = modelSize * 1.5  // Start closer to camera (was 2)
       minZoom = modelSize * 1.2
       maxZoom = modelSize * 4
 
@@ -322,9 +313,7 @@ async function init() {
 
       loading.value = false
 
-      // Initialize fluid simulation
       initFluidSimulation()
-
       animate()
     },
     undefined,
@@ -346,6 +335,7 @@ async function init() {
   canvas.addEventListener('touchend', onMouseUp)
 }
 
+/* ─────────────────────────── camera ───────────────────────────────── */
 function updateCameraPosition() {
   if (!camera) return
   const { theta, phi, radius } = spherical
@@ -357,7 +347,6 @@ function updateCameraPosition() {
 
 /* ─────────────────────────── fluid simulation ─────────────────────── */
 function initFluidSimulation() {
-  // Create offscreen canvas for fluid simulation
   const aspectRatio = canvas.width / canvas.height
   const baseRes = 1024
 
@@ -371,7 +360,6 @@ function initFluidSimulation() {
   }
   fluidCtx = fluidCanvas.getContext('2d')
 
-  // Create texture from fluid canvas
   fluidTexture = new THREE.CanvasTexture(fluidCanvas)
   fluidTexture.minFilter = THREE.LinearFilter
   fluidTexture.magFilter = THREE.LinearFilter
@@ -380,20 +368,16 @@ function initFluidSimulation() {
 function updateFluidSimulation() {
   if (!fluidCtx) return
 
-  // Increment animation time
   animTime += 0.003
 
-  // Fade out previous frame (diffusion effect)
   fluidCtx.fillStyle = 'rgba(0, 0, 0, 0.08)'
   fluidCtx.fillRect(0, 0, fluidCanvas.width, fluidCanvas.height)
 
-  // Add mouse trail to fluid
   fluidTrail.push({ x: mousePos.x, y: mousePos.y })
   if (fluidTrail.length > maxTrailLength) {
     fluidTrail.shift()
   }
 
-  // Draw fluid trail with gentle wave-like edges
   fluidTrail.forEach((point, i) => {
     const progress = i / maxTrailLength
     const baseSize = progress * 35 + 12
@@ -401,7 +385,6 @@ function updateFluidSimulation() {
 
     const time = animTime
 
-    // Create gentle wave motion
     const wave1 = Math.sin(point.x * Math.PI * 2 + time * 2) * 0.015
     const wave2 = Math.cos(point.y * Math.PI * 2 + time * 2) * 0.015
     const wave3 = Math.sin((point.x + point.y) * Math.PI + time * 1.5) * 0.01
@@ -428,7 +411,6 @@ function updateFluidSimulation() {
     fluidCtx.fillRect(0, 0, fluidCanvas.width, fluidCanvas.height)
   })
 
-  // Update texture
   if (fluidTexture) {
     fluidTexture.needsUpdate = true
   }
@@ -441,13 +423,11 @@ function updateFluidSimulation() {
 function animate() {
   animId = requestAnimationFrame(animate)
 
-  // Auto-rotate
   if (autoRotate) {
     spherical.theta += 0.002
     updateCameraPosition()
   }
 
-  // Apply rotation velocity
   if (Math.abs(rotVel.x) > 0.001 || Math.abs(rotVel.y) > 0.001) {
     spherical.theta += rotVel.x
     spherical.phi += rotVel.y
@@ -457,27 +437,20 @@ function animate() {
     updateCameraPosition()
   }
 
-  // Smooth mouse velocity for fluid effect
   mouseVel.x *= 0.95
   mouseVel.y *= 0.95
 
-  // Update fluid simulation
   updateFluidSimulation()
 
-  // Render based on mode
   if (props.mode === 'normal') {
-    // Render normal scene to texture
     renderer.setRenderTarget(renderTarget1)
     renderer.render(normalScene, camera)
 
-    // Render X-ray scene to texture
     renderer.setRenderTarget(renderTarget2)
     renderer.render(xrayScene, camera)
 
-    // Composite to screen with custom shader
     renderer.setRenderTarget(null)
 
-    // Create full-screen quad for compositing
     if (!compositingMesh) {
       const geometry = new THREE.PlaneGeometry(2, 2)
       const material = new THREE.ShaderMaterial({
@@ -501,16 +474,13 @@ function animate() {
       orthoScene.add(compositingMesh)
     }
 
-    // Update uniforms
     compositingMesh.material.uniforms.mousePosition.value.set(mousePos.x, mousePos.y)
     if (fluidTexture) {
       compositingMesh.material.uniforms.fluidTexture.value = fluidTexture
     }
 
-    // Render composite
     renderer.render(orthoScene, orthoCamera)
   } else {
-    // Glass mode - just render normal scene
     renderer.setRenderTarget(null)
     renderer.render(normalScene, camera)
   }
@@ -526,7 +496,6 @@ function onResize() {
   camera.updateProjectionMatrix()
   renderer.setSize(W, H, false)
 
-  // Update render targets with device pixel ratio
   const targetW = W * window.devicePixelRatio
   const targetH = H * window.devicePixelRatio
 
@@ -539,7 +508,6 @@ function onResize() {
     compositingMesh.material.uniforms.resolution.value.set(targetW, targetH)
   }
 
-  // Re-initialize fluid canvas with new aspect ratio
   if (fluidCanvas) {
     const aspectRatio = W / H
     const baseRes = 1024
@@ -567,7 +535,6 @@ function onMouseDown(e) {
 }
 
 function onMouseMove(e) {
-  // Handle rotation
   if (isDragging) {
     const dx = e.clientX - lastMouse.x
     const dy = e.clientY - lastMouse.y
@@ -576,18 +543,15 @@ function onMouseMove(e) {
     lastMouse = { x: e.clientX, y: e.clientY }
   }
 
-  // Update mouse position for X-ray effect
   const moveCanvas = canvasRef.value
   if (moveCanvas) {
     const rect = moveCanvas.getBoundingClientRect()
     const x = (e.clientX - rect.left) / rect.width
-    const y = 1.0 - (e.clientY - rect.top) / rect.height // Flip Y
+    const y = 1.0 - (e.clientY - rect.top) / rect.height
 
-    // Smooth mouse movement
     mousePos.x += (x - mousePos.x) * 0.15
     mousePos.y += (y - mousePos.y) * 0.15
 
-    // Track velocity
     mouseVel.x = x - mousePos.x
     mouseVel.y = y - mousePos.y
   }

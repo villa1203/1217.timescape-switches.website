@@ -54,16 +54,9 @@ let xrayMaterials = new Map()
 let glassMaterials = new Map()
 
 /* ─────────────────────────── part color assignments ───────────────── */
-// Define which parts get which colors - edit these arrays to customize
-// Based on the tinyColors pattern: small parts cycle through [black, green, white×5]
-// Set USE_DYNAMIC_ASSIGNMENT = true to auto-populate based on model, false to use hardcoded values
-const USE_DYNAMIC_ASSIGNMENT = true
-
-// Hardcoded defaults (edit these part numbers as needed):
-let blackParts = [0]           // Black parts (glow purple in X-ray mode)
-let blackPartsMetallic = []    // Subset of black with higher metalness/roughness
-let greenParts = [1]           // Green parts
-let whiteParts = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]  // White plastic parts
+// Parts are assigned by mesh name
+let purpleParts = []      // Parts that glow purple in X-ray mode
+let blackParts = []       // Black plastic parts
 
 /* ─────────────────────────── custom shaders ───────────────────────── */
 const compositingFragmentShader = `
@@ -141,19 +134,19 @@ function switchToGlassMode() {
       if (!glassMaterials.has(child)) {
         // Find which part index this is
         const partIndex = meshes.indexOf(child)
-        const isBlackPart = blackParts.includes(partIndex)
+        const isPurplePart = purpleParts.includes(partIndex)
 
         const purpleColor = 0x8210c1
         const glassMat = new THREE.MeshStandardMaterial({
-          color: isBlackPart ? purpleColor : 0xe0e0e0,
+          color: isPurplePart ? purpleColor : 0xe0e0e0,
           metalness: 0.0,
           roughness: 0.7,
           transparent: true,
           opacity: 0.4,
           side: THREE.DoubleSide,
           depthWrite: false,
-          emissive: isBlackPart ? purpleColor : 0x000000,
-          emissiveIntensity: isBlackPart ? 0.8 : 0
+          emissive: isPurplePart ? purpleColor : 0x000000,
+          emissiveIntensity: isPurplePart ? 0.8 : 0
         })
 
         glassMaterials.set(child, glassMat)
@@ -190,7 +183,7 @@ async function init() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.3
+  renderer.toneMappingExposure = 1.8
 
   /* Create render targets for dual-scene rendering */
   const targetW = W * window.devicePixelRatio
@@ -220,10 +213,10 @@ async function init() {
 
   /* Enhanced lighting setup */
   function addLights(targetScene, intensity = 1.0) {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.0 * intensity)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.5 * intensity)
     targetScene.add(ambientLight)
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.5 * intensity)
+    const keyLight = new THREE.DirectionalLight(0xffffff, 3.0 * intensity)
     keyLight.position.set(5, 8, 10)
     keyLight.castShadow = true
     keyLight.shadow.mapSize.width = 4096
@@ -241,7 +234,7 @@ async function init() {
     rightLight.position.set(8, 4, 6)
     targetScene.add(rightLight)
 
-    const rimLight = new THREE.DirectionalLight(0xaaaaff, 0.8 * intensity)
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.8 * intensity)
     rimLight.position.set(0, 2, -10)
     targetScene.add(rimLight)
   }
@@ -252,29 +245,9 @@ async function init() {
   /* Load GLB model */
   const loader = new GLTFLoader()
   loader.load(
-    '/interrupteur.glb',
+    '/kettle.glb',
     (gltf) => {
       model = gltf.scene
-
-      // Calculate part sizes (exact ThreeSceneAdvanced logic)
-      const partSizes = new Map()
-      model.traverse((child) => {
-        if (child.isMesh) {
-          const box = new THREE.Box3().setFromObject(child)
-          const size = box.getSize(new THREE.Vector3())
-          const volume = size.x * size.y * size.z
-          partSizes.set(child, volume)
-        }
-      })
-
-      const volumes = Array.from(partSizes.values()).sort((a, b) => a - b)
-      const smallThreshold = volumes[Math.floor(volumes.length * 0.3)]
-
-      const tinyColors = [
-        0x000000, 0x00ff00, 0xffffff, 0xffffff,
-        0xffffff, 0xffffff, 0xffffff, 0xa8d8ea,
-      ]
-      let colorIndex = 0
 
       // Collect meshes to track indices
       const normalMeshes = []
@@ -282,44 +255,63 @@ async function init() {
         if (child.isMesh) normalMeshes.push(child)
       })
 
-      // Optionally determine color assignments dynamically
-      if (USE_DYNAMIC_ASSIGNMENT) {
-        // Reset arrays for dynamic assignment
-        blackParts = []
-        blackPartsMetallic = []
-        greenParts = []
-        whiteParts = []
+      // Assign parts by mesh name
+      purpleParts = []
+      blackParts = []
+      let purpleBlackParts = []  // Parts that are black in normal mode but purple in X-ray
 
-        normalMeshes.forEach((child, meshIndex) => {
-          const originalMat = child.material
-          const volume = partSizes.get(child)
+      normalMeshes.forEach((child, i) => {
+        const name = (child.name || '').toLowerCase()
 
-          if (volume <= smallThreshold) {
-            const color = tinyColors[colorIndex % tinyColors.length]
+        // Purple parts that glow in X-ray: circle primitive0, circle primitive 01, Circle002_1, Circle002_2
+        if (name.includes('circle primitive0') ||
+            name.includes('circle primitive 01') ||
+            name.includes('circle001primitve1') ||
+            name.includes('circle001primitive1') ||
+            name.includes('circle002_1') ||
+            name.includes('circle002_2')) {
+          purpleParts.push(i)
+        }
 
-            // Categorize by color
-            if (color === 0x000000) blackParts.push(meshIndex)
-            else if (color === 0x00ff00) greenParts.push(meshIndex)
-            else whiteParts.push(meshIndex)
+        // Circle002_1 is black in normal mode but purple in X-ray
+        if (name.includes('circle002_1')) {
+          purpleBlackParts.push(i)
+        }
 
-            colorIndex++
-          } else if (originalMat.metalness === 1) {
-            blackParts.push(meshIndex)
-            blackPartsMetallic.push(meshIndex)  // Track metallic black parts separately
-          } else {
-            whiteParts.push(meshIndex)
-          }
-        })
+        // Black plastic parts
+        if (name === 'circle' ||
+            name.includes('animo_thermopot_wkt20n016') ||
+            name.includes('animo_thermopot_wkt20n013') ||
+            name.includes('circle007') ||
+            name.includes('circle008')) {
+          blackParts.push(i)
+        }
+      })
 
-        // Log color assignments for easy hardcoding
-        console.log('ThreeSwitch part assignments:')
-        console.log('  blackParts:', blackParts, '// All black parts (glow purple in X-ray)')
-        console.log('  blackPartsMetallic:', blackPartsMetallic, '// Black parts with metallic finish')
-        console.log('  greenParts:', greenParts, '// Green parts')
-        console.log('  whiteParts:', whiteParts, '// White plastic parts')
-      }
+      // Log part assignments with hierarchy
+      console.log('=== ThreeKettle part assignments ===')
+      console.log('Total meshes found:', normalMeshes.length)
+      console.log('Purple parts (glow in X-ray):', purpleParts)
+      console.log('Purple-Black parts (black but glow purple):', purpleBlackParts)
+      console.log('Black plastic parts:', blackParts)
+      console.log('---')
 
-      // Create materials for normal scene based on color assignments
+      normalMeshes.forEach((child, i) => {
+        const parentName = child.parent?.name || 'root'
+        const meshName = child.name || 'unnamed'
+        const fullPath = parentName !== 'root' ? `${parentName} > ${meshName}` : meshName
+
+        let partType = 'Aluminum'
+        if (purpleBlackParts.includes(i)) partType = 'Black (glows purple in X-ray)'
+        else if (blackParts.includes(i)) partType = 'Black plastic'
+        else if (purpleParts.includes(i)) partType = 'Purple glow'
+
+        console.log(`Part ${i}: "${fullPath}" - ${partType}`)
+      })
+      console.log('=== End ThreeKettle ===')
+      console.log('')
+
+      // Create materials for normal scene
       normalMeshes.forEach((child, meshIndex) => {
         child.castShadow = true
         child.receiveShadow = true
@@ -330,38 +322,20 @@ async function init() {
 
         let normalMaterial
 
-        if (blackParts.includes(meshIndex)) {
-          // Black parts - check if metallic or not
-          if (blackPartsMetallic.includes(meshIndex)) {
-            normalMaterial = new THREE.MeshStandardMaterial({
-              color: 0x000000,
-              metalness: 0.2,
-              roughness: 0.4,
-              side: THREE.DoubleSide,
-            })
-          } else {
-            normalMaterial = new THREE.MeshStandardMaterial({
-              color: 0x000000,
-              metalness: 0.1,
-              roughness: 0.3,
-              side: THREE.DoubleSide,
-              envMapIntensity: 1.0
-            })
-          }
-        } else if (greenParts.includes(meshIndex)) {
+        if (blackParts.includes(meshIndex) || purpleBlackParts.includes(meshIndex)) {
+          // Black plastic parts (including Circle002_1 which glows purple in X-ray)
           normalMaterial = new THREE.MeshStandardMaterial({
-            color: 0x00ff00,
+            color: 0x000000,
             metalness: 0.1,
             roughness: 0.3,
             side: THREE.DoubleSide,
-            envMapIntensity: 1.0
           })
         } else {
-          // White parts
+          // Light aluminum finish for all other parts (including purple parts in normal mode)
           normalMaterial = new THREE.MeshStandardMaterial({
             color: 0xffffff,
-            metalness: 0.0,
-            roughness: 0.35,
+            metalness: 0.45,
+            roughness: 0.4,
             side: THREE.DoubleSide,
           })
         }
@@ -389,20 +363,20 @@ async function init() {
           child.geometry.computeVertexNormals()
         }
 
-        // Black parts glow purple in X-ray mode
-        const isBlackPart = blackParts.includes(i)
+        // Purple parts glow in X-ray mode
+        const isPurplePart = purpleParts.includes(i)
         const purpleColor = 0x8210c1
 
         const xrayMat = new THREE.MeshStandardMaterial({
-          color: isBlackPart ? purpleColor : 0xe0e0e0,  // Purple for black parts, gray for rest
+          color: isPurplePart ? purpleColor : 0xe0e0e0,
           metalness: 0.0,
           roughness: 0.7,
           transparent: true,
           opacity: 0.4,
           side: THREE.DoubleSide,
           depthWrite: false,
-          emissive: isBlackPart ? purpleColor : 0x000000,  // Glowing purple for black parts
-          emissiveIntensity: isBlackPart ? 0.8 : 0.0
+          emissive: isPurplePart ? purpleColor : 0x000000,
+          emissiveIntensity: isPurplePart ? 0.8 : 0.0
         })
 
         child.material = xrayMat

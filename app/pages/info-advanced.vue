@@ -31,6 +31,30 @@
         >
           Elevator
         </button>
+        <button
+          @click="currentModel = 'fridge'"
+          :class="{ active: currentModel === 'fridge' }"
+        >
+          Fridge
+        </button>
+        <button
+          @click="currentModel = 'kettle'"
+          :class="{ active: currentModel === 'kettle' }"
+        >
+          Kettle
+        </button>
+        <button
+          @click="currentModel = 'plugtimer'"
+          :class="{ active: currentModel === 'plugtimer' }"
+        >
+          Plug Timer
+        </button>
+        <button
+          @click="currentModel = 'lamp'"
+          :class="{ active: currentModel === 'lamp' }"
+        >
+          Lamp
+        </button>
       </div>
 
       <ThreeSwitch
@@ -41,6 +65,26 @@
       <ThreeElevator
         v-if="currentModel === 'elevator'"
         :key="'elevator'"
+        :mode="viewerMode"
+      />
+      <ThreeFridge
+        v-if="currentModel === 'fridge'"
+        :key="'fridge'"
+        :mode="viewerMode"
+      />
+      <ThreeKettle
+        v-if="currentModel === 'kettle'"
+        :key="'kettle'"
+        :mode="viewerMode"
+      />
+      <ThreePlugtimer
+        v-if="currentModel === 'plugtimer'"
+        :key="'plugtimer'"
+        :mode="viewerMode"
+      />
+      <ThreeLamp
+        v-if="currentModel === 'lamp'"
+        :key="'lamp'"
         :mode="viewerMode"
       />
     </div>
@@ -96,7 +140,9 @@ const currentModel = ref('interrupteur')
     left: 20px;
     z-index: 100;
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
+    max-width: 500px;
   }
 
   .model-selector button {

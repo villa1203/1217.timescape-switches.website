@@ -229,66 +229,92 @@ async function init() {
       let colorIndex = 0
       let xrayColorIndex = 0
 
-      // Apply COLORED materials to normal model (top layer - what you see normally)
+      // Create parallel arrays for both models
+      const normalMeshes = []
+      const xrayMeshes = []
+
       model.traverse((child) => {
-        if (child.isMesh) {
-          child.castShadow = true
-          child.receiveShadow = true
+        if (child.isMesh) normalMeshes.push(child)
+      })
 
-          if (child.geometry) {
-            child.geometry.computeVertexNormals()
-          }
+      xrayModel.traverse((child) => {
+        if (child.isMesh) xrayMeshes.push(child)
+      })
 
-          const originalMat = child.material
-          const volume = partSizes.get(child)
-          let normalMaterial
+      // Apply COLORED materials to normal model (top layer - what you see normally)
+      normalMeshes.forEach((child, index) => {
+        child.castShadow = true
+        child.receiveShadow = true
 
-          // Tiny parts get colorful materials
-          if (volume <= smallThreshold) {
-            normalMaterial = new THREE.MeshStandardMaterial({
-              color: tinyColors[colorIndex % tinyColors.length],
-              metalness: 0,
-              roughness: 0.4,
-              side: THREE.DoubleSide,
-            })
-            colorIndex++
-          }
-          // Originally metallic parts become black
-          else if (originalMat.metalness === 1) {
-            normalMaterial = new THREE.MeshStandardMaterial({
-              color: 0x000000,
-              metalness: 0,
-              roughness: 0.5,
-              side: THREE.DoubleSide,
-            })
-          }
-          // Everything else is white plastic
-          else {
-            normalMaterial = new THREE.MeshStandardMaterial({
-              color: 0xffffff,
-              metalness: 0,
-              roughness: 0.4,
-              side: THREE.DoubleSide,
-            })
-          }
-
-          child.material = normalMaterial
-          normalMaterials.set(child, normalMaterial)
+        if (child.geometry) {
+          child.geometry.computeVertexNormals()
         }
+
+        const originalMat = child.material
+        const volume = partSizes.get(child)
+        let normalMaterial
+
+        // Tiny parts get colorful materials
+        if (volume <= smallThreshold) {
+          normalMaterial = new THREE.MeshStandardMaterial({
+            color: tinyColors[colorIndex % tinyColors.length],
+            metalness: 0,
+            roughness: 0.4,
+            side: THREE.DoubleSide,
+          })
+          colorIndex++
+        }
+        // Originally metallic parts become black
+        else if (originalMat.metalness === 1) {
+          normalMaterial = new THREE.MeshStandardMaterial({
+            color: 0x000000,
+            metalness: 0,
+            roughness: 0.5,
+            side: THREE.DoubleSide,
+          })
+        }
+        // Everything else is white plastic
+        else {
+          normalMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            metalness: 0,
+            roughness: 0.4,
+            side: THREE.DoubleSide,
+          })
+        }
+
+        child.material = normalMaterial
+        normalMaterials.set(child, normalMaterial)
       })
 
       // Apply FROSTED GLASS to X-ray model (bottom layer - revealed through circle)
-      xrayModel.traverse((child) => {
-        if (child.isMesh) {
-          child.castShadow = true
-          child.receiveShadow = true
+      xrayMeshes.forEach((child, index) => {
+        child.castShadow = true
+        child.receiveShadow = true
 
-          if (child.geometry) {
-            child.geometry.computeVertexNormals()
-          }
+        if (child.geometry) {
+          child.geometry.computeVertexNormals()
+        }
 
-          // All parts are frosted glass in X-ray view
-          const glassXrayMaterial = new THREE.MeshStandardMaterial({
+        // Get the corresponding normal material by index
+        const normalMesh = normalMeshes[index]
+        const normalMaterial = normalMaterials.get(normalMesh)
+
+        let glassXrayMaterial
+
+        // Black parts become purple in X-ray view, everything else is frosted gray
+        if (normalMaterial && normalMaterial.color.getHex() === 0x000000) {
+          glassXrayMaterial = new THREE.MeshStandardMaterial({
+            color: 0x8210c1,  // Purple for black parts
+            metalness: 0.0,
+            roughness: 0.7,
+            transparent: true,
+            opacity: 0.4,
+            side: THREE.DoubleSide,
+            depthWrite: false
+          })
+        } else {
+          glassXrayMaterial = new THREE.MeshStandardMaterial({
             color: 0xe0e0e0,  // Light gray frosted color
             metalness: 0.0,
             roughness: 0.7,   // High roughness for strong frosted effect
@@ -297,9 +323,9 @@ async function init() {
             side: THREE.DoubleSide,
             depthWrite: false
           })
-
-          child.material = glassXrayMaterial
         }
+
+        child.material = glassXrayMaterial
       })
 
       // Center both models
