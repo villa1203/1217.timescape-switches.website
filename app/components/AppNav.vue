@@ -19,7 +19,13 @@
         <div>
           <div class="app-grid">
             <div>
-              <StickerButton text="Research" to="/research" :font_size="24" :stroke_width="20" />
+              <StickerButton
+                text="Research"
+                @click="openResearch"
+                :font_size="24"
+                :stroke_width="20"
+                :color="isOpen ? 'var(--app-color-secondary)' : 'var(--app-color-primary)'"
+              />
             </div>
 
             <div>
@@ -38,7 +44,11 @@
 
 
 <script setup lang="ts">
-const shabbatText = ref('Weekly Timescape')
+import { useShabbatCountdown } from '~/composables/useShabbatCountdown'
+import { useResearchOverlay } from '~/composables/useResearchOverlay'
+
+const { text: shabbatText } = useShabbatCountdown()
+const { toggle: openResearch, isOpen } = useResearchOverlay()
 const selectedLocation = ref('auto')
 let userLocation: { latitude: number; longitude: number; city?: string } | null = null
 

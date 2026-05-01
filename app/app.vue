@@ -16,6 +16,8 @@
     <div class="v-app__footer app-grid">
       <AppFooter/>
     </div>
+
+    <ResearchOverlay />
   </div>
 </template>
 
