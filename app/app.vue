@@ -1,5 +1,5 @@
 <template>
-  <div class="v-app" :class="{ 'v-app--dark': isDarkMode }"
+  <div class="v-app" :class="{ 'v-app--dark': isDarkMode && !route.meta.disableShabbat }"
   >
 
     <div class="v-app__header app-grid">
@@ -23,6 +23,7 @@
 
 
 <script setup lang="ts">
+const route = useRoute()
 const isDarkMode = ref(false)
 let userLocation: { latitude: number; longitude: number; city?: string } | null = null
 
