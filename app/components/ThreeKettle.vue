@@ -16,12 +16,26 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 
 /* ─────────────────────────── props ────────────────────────────────── */
 const props = defineProps({
-  // 'normal' | 'glass'
-  mode: {
-    type: String,
-    default: 'normal'
-  }
+  mode: { type: String, default: 'normal' }  // 'normal' | 'glass'
 })
+
+/* ─────────────────────────── colours ──────────────────────────────── */
+// Edit these hex values to quickly update all material colours.
+const PURPLE       = 0x8210c1  // xray glow — highlighted parts
+const XRAY_BODY    = 0xe0e0e0  // xray — all non-highlighted parts (transparent grey)
+const NORMAL_METAL = 0x999999   // normal — light aluminum finish
+const NORMAL_BLACK = 0x000000  // normal — black plastic parts
+
+/* ─────────────────────────── part assignments ─────────────────────── */
+// Parts are assigned by mesh name on load (see console.log below).
+// purpleParts:  glow PURPLE in xray mode
+// blackParts:   black plastic in normal mode
+//   note: some parts appear in both (black in normal, purple in xray)
+let purpleParts = []
+let blackParts  = []
+
+/* ─────────────────────────── camera ───────────────────────────────── */
+const CAMERA_DISTANCE = 1.2  // × modelSize — decrease to start closer, increase to zoom out
 
 /* ─────────────────────────── refs & state ─────────────────────────── */
 const canvasRef = ref(null)
@@ -34,31 +48,21 @@ let normalScene, xrayScene, compositingMesh, orthoCamera, orthoScene
 let isDragging = false, lastMouse = { x: 0, y: 0 }
 let rotVel = { x: 0, y: 0 }, autoRotate = true, autoRotateTimer = null
 let spherical = { theta: 0, phi: Math.PI / 2, radius: 5 }
-let modelSize = 1
-let minZoom = 0.5
-let maxZoom = 2
+let modelSize = 1, minZoom = 0.5, maxZoom = 2
 let mousePos = { x: 0.5, y: 0.5 }
-let mouseVel = { x: 0, y: 0 }
 
-/* ─────────────────────────── fluid simulation ─────────────────────── */
-let fluidCanvas, fluidCtx
-let fluidTexture
-let prevMousePos = { x: 0.5, y: 0.5 }
+/* ─────────────────────────── fluid simulation state ───────────────── */
+let fluidCanvas, fluidCtx, fluidTexture
 const fluidTrail = []
 const maxTrailLength = 12
-let animTime = 0  // For organic edge animation
+let animTime = 0
 
 /* ─────────────────────────── material storage ─────────────────────── */
 let normalMaterials = new Map()
 let xrayMaterials = new Map()
 let glassMaterials = new Map()
 
-/* ─────────────────────────── part color assignments ───────────────── */
-// Parts are assigned by mesh name
-let purpleParts = []      // Parts that glow purple in X-ray mode
-let blackParts = []       // Black plastic parts
-
-/* ─────────────────────────── custom shaders ───────────────────────── */
+/* ─────────────────────────── shaders ──────────────────────────────── */
 const compositingFragmentShader = `
 uniform sampler2D normalTexture;
 uniform sampler2D xrayTexture;
@@ -112,7 +116,7 @@ void main() {
 }
 `
 
-/* ─────────────────────────── material management ───────────────────── */
+/* ─────────────────────────── material mode switching ──────────────── */
 function switchToNormalMode() {
   if (!model) return
   model.traverse((child) => {
@@ -125,30 +129,24 @@ function switchToNormalMode() {
 function switchToGlassMode() {
   if (!model) return
 
-  // Get all meshes to determine indices
   const meshes = []
   model.traverse((c) => { if (c.isMesh) meshes.push(c) })
 
   model.traverse((child) => {
     if (child.isMesh) {
       if (!glassMaterials.has(child)) {
-        // Find which part index this is
-        const partIndex = meshes.indexOf(child)
-        const isPurplePart = purpleParts.includes(partIndex)
-
-        const purpleColor = 0x8210c1
+        const isPurple = purpleParts.includes(meshes.indexOf(child))
         const glassMat = new THREE.MeshStandardMaterial({
-          color: isPurplePart ? purpleColor : 0xe0e0e0,
+          color: isPurple ? PURPLE : XRAY_BODY,
           metalness: 0.0,
           roughness: 0.7,
           transparent: true,
           opacity: 0.4,
           side: THREE.DoubleSide,
           depthWrite: false,
-          emissive: isPurplePart ? purpleColor : 0x000000,
-          emissiveIntensity: isPurplePart ? 0.8 : 0
+          emissive: isPurple ? PURPLE : 0x000000,
+          emissiveIntensity: isPurple ? 0.8 : 0
         })
-
         glassMaterials.set(child, glassMat)
       }
       child.material = glassMaterials.get(child)
@@ -156,7 +154,7 @@ function switchToGlassMode() {
   })
 }
 
-/* ─────────────────────────── init ────────────────────────────────── */
+/* ─────────────────────────── init ─────────────────────────────────── */
 async function init() {
   THREE = await import('three').then(m => m.default ?? m)
   const { GLTFLoader: Loader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
@@ -170,7 +168,7 @@ async function init() {
   camera = new THREE.PerspectiveCamera(75, W / H, 0.1, 200)
   updateCameraPosition()
 
-  /* Renderer with enhanced settings */
+  /* Renderer */
   renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -185,7 +183,7 @@ async function init() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.8
 
-  /* Create render targets for dual-scene rendering */
+  /* Render targets for dual-scene compositing */
   const targetW = W * window.devicePixelRatio
   const targetH = H * window.devicePixelRatio
 
@@ -211,7 +209,7 @@ async function init() {
   xrayScene = new THREE.Scene()
   xrayScene.background = new THREE.Color(0xffffff)
 
-  /* Enhanced lighting setup */
+  /* Lighting */
   function addLights(targetScene, intensity = 1.0) {
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.5 * intensity)
     targetScene.add(ambientLight)
@@ -249,21 +247,17 @@ async function init() {
     (gltf) => {
       model = gltf.scene
 
-      // Collect meshes to track indices
       const normalMeshes = []
-      model.traverse((child) => {
-        if (child.isMesh) normalMeshes.push(child)
-      })
+      model.traverse((c) => { if (c.isMesh) normalMeshes.push(c) })
 
-      // Assign parts by mesh name
+      /* Assign parts by mesh name */
       purpleParts = []
-      blackParts = []
-      let purpleBlackParts = []  // Parts that are black in normal mode but purple in X-ray
+      blackParts  = []
 
       normalMeshes.forEach((child, i) => {
         const name = (child.name || '').toLowerCase()
 
-        // Purple parts that glow in X-ray: circle primitive0, circle primitive 01, Circle002_1, Circle002_2
+        // Purple glow in xray — these are the internal heating elements / indicator rings
         if (name.includes('circle primitive0') ||
             name.includes('circle primitive 01') ||
             name.includes('circle001primitve1') ||
@@ -273,13 +267,9 @@ async function init() {
           purpleParts.push(i)
         }
 
-        // Circle002_1 is black in normal mode but purple in X-ray
-        if (name.includes('circle002_1')) {
-          purpleBlackParts.push(i)
-        }
-
-        // Black plastic parts
+        // Black plastic parts — also includes circle002_1 (black in normal, purple in xray)
         if (name === 'circle' ||
+            name.includes('circle002_1') ||
             name.includes('animo_thermopot_wkt20n016') ||
             name.includes('animo_thermopot_wkt20n013') ||
             name.includes('circle007') ||
@@ -288,102 +278,63 @@ async function init() {
         }
       })
 
-      // Log part assignments with hierarchy
-      console.log('=== ThreeKettle part assignments ===')
-      console.log('Total meshes found:', normalMeshes.length)
-      console.log('Purple parts (glow in X-ray):', purpleParts)
-      console.log('Purple-Black parts (black but glow purple):', purpleBlackParts)
-      console.log('Black plastic parts:', blackParts)
-      console.log('---')
+      // console.log('ThreeKettle meshes:')
+      // normalMeshes.forEach((c, i) => console.log(`  [${i}] name="${c.name}" parent="${c.parent?.name}"`))
+      // console.log('ThreeKettle part assignments:', { purpleParts, blackParts })
 
+      /* Normal scene materials */
       normalMeshes.forEach((child, i) => {
-        const parentName = child.parent?.name || 'root'
-        const meshName = child.name || 'unnamed'
-        const fullPath = parentName !== 'root' ? `${parentName} > ${meshName}` : meshName
-
-        let partType = 'Aluminum'
-        if (purpleBlackParts.includes(i)) partType = 'Black (glows purple in X-ray)'
-        else if (blackParts.includes(i)) partType = 'Black plastic'
-        else if (purpleParts.includes(i)) partType = 'Purple glow'
-
-        console.log(`Part ${i}: "${fullPath}" - ${partType}`)
-      })
-      console.log('=== End ThreeKettle ===')
-      console.log('')
-
-      // Create materials for normal scene
-      normalMeshes.forEach((child, meshIndex) => {
         child.castShadow = true
         child.receiveShadow = true
+        if (child.geometry) child.geometry.computeVertexNormals()
 
-        if (child.geometry) {
-          child.geometry.computeVertexNormals()
-        }
+        // blackParts covers both pure-black parts and those that glow purple in xray
+        const mat = blackParts.includes(i)
+          ? new THREE.MeshStandardMaterial({
+              color: NORMAL_BLACK,
+              metalness: 0.1,
+              roughness: 0.3,
+              side: THREE.DoubleSide,
+            })
+          : new THREE.MeshStandardMaterial({
+              color: NORMAL_METAL,
+              metalness: 0.45,
+              roughness: 0.4,
+              side: THREE.DoubleSide,
+            })
 
-        let normalMaterial
-
-        if (blackParts.includes(meshIndex) || purpleBlackParts.includes(meshIndex)) {
-          // Black plastic parts (including Circle002_1 which glows purple in X-ray)
-          normalMaterial = new THREE.MeshStandardMaterial({
-            color: 0x000000,
-            metalness: 0.1,
-            roughness: 0.3,
-            side: THREE.DoubleSide,
-          })
-        } else {
-          // Light aluminum finish for all other parts (including purple parts in normal mode)
-          normalMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            metalness: 0.45,
-            roughness: 0.4,
-            side: THREE.DoubleSide,
-          })
-        }
-
-        child.material = normalMaterial
-        normalMaterials.set(child, normalMaterial)
+        child.material = mat
+        normalMaterials.set(child, mat)
       })
 
-      // Clone model for X-ray scene
+      /* X-ray scene — clone and apply transparent materials */
       const xrayModel = model.clone()
-
-      // Collect xray meshes
       const xrayMeshes = []
-      xrayModel.traverse((child) => {
-        if (child.isMesh) xrayMeshes.push(child)
-      })
+      xrayModel.traverse((c) => { if (c.isMesh) xrayMeshes.push(c) })
 
-      // Create frosted glass X-ray materials
-      for (let i = 0; i < xrayMeshes.length; i++) {
-        const child = xrayMeshes[i]
+      xrayMeshes.forEach((child, i) => {
         child.castShadow = true
         child.receiveShadow = true
+        if (child.geometry) child.geometry.computeVertexNormals()
 
-        if (child.geometry) {
-          child.geometry.computeVertexNormals()
-        }
-
-        // Purple parts glow in X-ray mode
-        const isPurplePart = purpleParts.includes(i)
-        const purpleColor = 0x8210c1
-
-        const xrayMat = new THREE.MeshStandardMaterial({
-          color: isPurplePart ? purpleColor : 0xe0e0e0,
+        const isPurple = purpleParts.includes(i)
+        const mat = new THREE.MeshStandardMaterial({
+          color: isPurple ? PURPLE : XRAY_BODY,
           metalness: 0.0,
-          roughness: 0.7,
+          roughness: 0.85,
           transparent: true,
-          opacity: 0.4,
+          opacity: 0.6,
           side: THREE.DoubleSide,
           depthWrite: false,
-          emissive: isPurplePart ? purpleColor : 0x000000,
-          emissiveIntensity: isPurplePart ? 0.8 : 0.0
+          emissive: isPurple ? PURPLE : 0x000000,
+          emissiveIntensity: isPurple ? 0.8 : 0.0
         })
 
-        child.material = xrayMat
-        xrayMaterials.set(child, xrayMat)
-      }
+        child.material = mat
+        xrayMaterials.set(child, mat)
+      })
 
-      // Center models
+      /* Center models */
       const box = new THREE.Box3().setFromObject(model)
       const center = box.getCenter(new THREE.Vector3())
       model.position.sub(center)
@@ -391,19 +342,14 @@ async function init() {
 
       const size = box.getSize(new THREE.Vector3())
       modelSize = Math.max(size.x, size.y, size.z)
-
-      spherical.radius = modelSize * 2
+      spherical.radius = modelSize * CAMERA_DISTANCE
       minZoom = modelSize * 1.2
       maxZoom = modelSize * 4
-
       updateCameraPosition()
 
-      // Add to scenes
       normalScene.add(model)
       xrayScene.add(xrayModel)
-
       loading.value = false
-
       initFluidSimulation()
       animate()
     },
@@ -414,7 +360,7 @@ async function init() {
     }
   )
 
-  // Event listeners
+  /* Event listeners */
   window.addEventListener('resize', onResize)
   canvas.addEventListener('mousedown', onMouseDown)
   canvas.addEventListener('mousemove', onMouseMove)
@@ -465,21 +411,17 @@ function updateFluidSimulation() {
   fluidCtx.fillRect(0, 0, fluidCanvas.width, fluidCanvas.height)
 
   fluidTrail.push({ x: mousePos.x, y: mousePos.y })
-  if (fluidTrail.length > maxTrailLength) {
-    fluidTrail.shift()
-  }
+  if (fluidTrail.length > maxTrailLength) fluidTrail.shift()
 
   fluidTrail.forEach((point, i) => {
     const progress = i / maxTrailLength
     const baseSize = progress * 35 + 12
     const alpha = progress
-
     const time = animTime
 
     const wave1 = Math.sin(point.x * Math.PI * 2 + time * 2) * 0.015
     const wave2 = Math.cos(point.y * Math.PI * 2 + time * 2) * 0.015
     const wave3 = Math.sin((point.x + point.y) * Math.PI + time * 1.5) * 0.01
-
     const flowX = wave1 + wave3
     const flowY = wave2 + wave3
 
@@ -489,11 +431,7 @@ function updateFluidSimulation() {
     const centerX = (point.x + flowX) * fluidCanvas.width
     const centerY = (1.0 - point.y + flowY) * fluidCanvas.height
 
-    const gradient = fluidCtx.createRadialGradient(
-      centerX, centerY, 0,
-      centerX, centerY, size
-    )
-
+    const gradient = fluidCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, size)
     gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.95})`)
     gradient.addColorStop(0.65, `rgba(255, 255, 255, ${alpha * 0.3})`)
     gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
@@ -502,23 +440,12 @@ function updateFluidSimulation() {
     fluidCtx.fillRect(0, 0, fluidCanvas.width, fluidCanvas.height)
   })
 
-  if (fluidTexture) {
-    fluidTexture.needsUpdate = true
-  }
-
-  prevMousePos.x = mousePos.x
-  prevMousePos.y = mousePos.y
+  if (fluidTexture) fluidTexture.needsUpdate = true
 }
 
 /* ─────────────────────────── animate ──────────────────────────────── */
 function animate() {
   animId = requestAnimationFrame(animate)
-
-  xrayMaterials.forEach((mat) => {
-    if (mat.uniforms) {
-      mat.uniforms.cameraPosition.value.copy(camera.position)
-    }
-  })
 
   if (autoRotate) {
     spherical.theta += 0.002
@@ -533,9 +460,6 @@ function animate() {
     rotVel.y *= 0.92
     updateCameraPosition()
   }
-
-  mouseVel.x *= 0.95
-  mouseVel.y *= 0.95
 
   updateFluidSimulation()
 
@@ -555,26 +479,23 @@ function animate() {
         fragmentShader: compositingFragmentShader,
         uniforms: {
           normalTexture: { value: renderTarget1.texture },
-          xrayTexture: { value: renderTarget2.texture },
-          fluidTexture: { value: fluidTexture },
+          xrayTexture:   { value: renderTarget2.texture },
+          fluidTexture:  { value: fluidTexture },
           mousePosition: { value: new THREE.Vector2(mousePos.x, mousePos.y) },
-          revealRadius: { value: 0.08 },
-          revealSoftness: { value: 0.04 },
-          resolution: { value: new THREE.Vector2(canvas.width, canvas.height) },
-          useFluid: { value: true }
+          revealRadius:  { value: 0.08 },
+          revealSoftness:{ value: 0.04 },
+          resolution:    { value: new THREE.Vector2(canvas.width, canvas.height) },
+          useFluid:      { value: true }
         }
       })
       compositingMesh = new THREE.Mesh(geometry, material)
-
       orthoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
       orthoScene = new THREE.Scene()
       orthoScene.add(compositingMesh)
     }
 
     compositingMesh.material.uniforms.mousePosition.value.set(mousePos.x, mousePos.y)
-    if (fluidTexture) {
-      compositingMesh.material.uniforms.fluidTexture.value = fluidTexture
-    }
+    if (fluidTexture) compositingMesh.material.uniforms.fluidTexture.value = fluidTexture
 
     renderer.render(orthoScene, orthoCamera)
   } else {
@@ -608,7 +529,6 @@ function onResize() {
   if (fluidCanvas) {
     const aspectRatio = W / H
     const baseRes = 1024
-
     if (aspectRatio >= 1) {
       fluidCanvas.width = baseRes
       fluidCanvas.height = baseRes / aspectRatio
@@ -616,10 +536,7 @@ function onResize() {
       fluidCanvas.width = baseRes * aspectRatio
       fluidCanvas.height = baseRes
     }
-
-    if (fluidTexture) {
-      fluidTexture.needsUpdate = true
-    }
+    if (fluidTexture) fluidTexture.needsUpdate = true
   }
 }
 
@@ -643,14 +560,8 @@ function onMouseMove(e) {
   const moveCanvas = canvasRef.value
   if (moveCanvas) {
     const rect = moveCanvas.getBoundingClientRect()
-    const x = (e.clientX - rect.left) / rect.width
-    const y = 1.0 - (e.clientY - rect.top) / rect.height
-
-    mousePos.x += (x - mousePos.x) * 0.15
-    mousePos.y += (y - mousePos.y) * 0.15
-
-    mouseVel.x = x - mousePos.x
-    mouseVel.y = y - mousePos.y
+    mousePos.x += ((e.clientX - rect.left) / rect.width - mousePos.x) * 0.15
+    mousePos.y += (1.0 - (e.clientY - rect.top) / rect.height - mousePos.y) * 0.15
   }
 }
 
@@ -661,8 +572,7 @@ function onMouseUp() {
 
 function onWheel(e) {
   e.preventDefault()
-  const delta = e.deltaY * 0.001
-  spherical.radius += delta * modelSize
+  spherical.radius += e.deltaY * 0.001 * modelSize
   spherical.radius = Math.max(minZoom, Math.min(maxZoom, spherical.radius))
   updateCameraPosition()
 }
@@ -682,15 +592,8 @@ function onTouchMove(e) {
 /* ─────────────────────────── mode switching ───────────────────────── */
 watch(() => props.mode, (newMode) => {
   if (!model) return
-
-  switch (newMode) {
-    case 'normal':
-      switchToNormalMode()
-      break
-    case 'glass':
-      switchToGlassMode()
-      break
-  }
+  if (newMode === 'normal') switchToNormalMode()
+  else if (newMode === 'glass') switchToGlassMode()
 })
 
 /* ─────────────────────────── lifecycle ────────────────────────────── */
@@ -713,11 +616,8 @@ onUnmounted(() => {
     model.traverse((child) => {
       if (child.geometry) child.geometry.dispose()
       if (child.material) {
-        if (Array.isArray(child.material)) {
-          child.material.forEach(mat => mat.dispose())
-        } else {
-          child.material.dispose()
-        }
+        if (Array.isArray(child.material)) child.material.forEach(m => m.dispose())
+        else child.material.dispose()
       }
     })
   }

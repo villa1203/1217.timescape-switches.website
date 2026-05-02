@@ -3,7 +3,7 @@
     >
       <div class="app-grid app-grid--justify-between">
         <div class="nav-left">
-          <StickerButton :text="shabbatText" to="/" :font_size="24" :stroke_width="20" />
+          <StickerButton :text="shabbatText" to="/" :font_size="24" />
 
           <!-- Location dropdown -->
           <select v-model="selectedLocation" @change="onLocationChange" class="location-dropdown">
@@ -23,13 +23,12 @@
                 text="Research"
                 @click="openResearch"
                 :font_size="24"
-                :stroke_width="20"
                 :color="isOpen ? 'var(--app-color-secondary)' : 'var(--app-color-primary)'"
               />
             </div>
 
             <div>
-              <StickerButton text="Info" to="/info" :font_size="24" :stroke_width="20" />
+              <StickerButton text="Info" to="/info" :font_size="24" />
             </div>
           </div>
         </div>

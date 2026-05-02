@@ -69,7 +69,7 @@
     <!-- ── Reference ──────────────────────────────────────────────────── -->
     <div class="section">
       <div class="label">Reference — StickerText (single word/label)</div>
-      <StickerText
+      <StickerParagraph
         :text="`Lorem ipsum dolor\nconsectetur adipiscing`"
         :font_size="font_size"
         :stroke_width="stroke_width"
@@ -95,7 +95,7 @@ const max_width    = ref(600)
   display: flex;
   flex-direction: column;
   gap: 3rem;
-  background: #f0f0f0;
+  background: #ffffff;
   min-height: 100vh;
 }
 

@@ -5,11 +5,11 @@ const props = defineProps<{
   text:          string
   color?:        string
   variant?:      'primary' | 'secondary'
-  stroke_width?: number  // outer blob thickness — bigger = words connect more. default 35
+  stroke_width?: number  // outer blob thickness — bigger = words connect more. default 37
   font_size?:    number  // px. default 24
   line_height?:  number  // em multiplier between lines. default 1.2
   max_width?:    number  // px — wrap width. default 600
-  border_size?:  number  // visible colored border in px. default 6 — smaller = more white
+  border_size?:  number  // visible colored border in px. default 24 — smaller = more white
 }>()
 
 const uid      = useId()
@@ -24,7 +24,7 @@ const strokeColor = computed(() => {
 
 const bgColor = '#ffffff'
 const fs  = computed(() => props.font_size    ?? 24)
-const sw  = computed(() => props.stroke_width ?? 35)
+const sw  = computed(() => props.stroke_width ?? 37)
 const lh  = computed(() => props.line_height  ?? 1.2)
 const PAD = 30    // same x-offset StickerText uses
 
@@ -38,7 +38,7 @@ const svgHeight = computed(() =>
 
 // White interior stroke — covers the glow gradient zone, leaving only `border_size` px
 // of colored border visible. Clamped to min 2px so inter-letter gaps are always filled.
-const border         = computed(() => props.border_size ?? 6)
+const border         = computed(() => props.border_size ?? 24)
 const whiteInteriorSW = computed(() => Math.max(sw.value - border.value, 2))
 
 // ── Line measurement ─────────────────────────────────────────────────────────

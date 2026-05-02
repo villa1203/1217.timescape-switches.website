@@ -16,12 +16,31 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 
 /* ─────────────────────────── props ────────────────────────────────── */
 const props = defineProps({
-  // 'normal' | 'glass'
-  mode: {
-    type: String,
-    default: 'normal'
-  }
+  mode: { type: String, default: 'normal' }  // 'normal' | 'glass'
 })
+
+/* ─────────────────────────── colours ──────────────────────────────── */
+// Edit these hex values to quickly update all material colours.
+const PURPLE       = 0x8210c1  // xray glow — highlighted parts (blackParts in xray)
+const XRAY_BODY    = 0xe0e0e0  // xray — all non-highlighted parts (transparent grey)
+const NORMAL_WHITE = 0xffffff  // normal — white plastic body
+const NORMAL_BLACK = 0x000000  // normal — black parts
+const NORMAL_GREEN = 0x00ff00  // normal — green LED indicator
+
+/* ─────────────────────────── part assignments ─────────────────────── */
+// Parts are assigned dynamically by volume when USE_DYNAMIC_ASSIGNMENT is true.
+// Set it to false to use the hardcoded arrays below (faster, no recomputation).
+// The console.log below shows the result of dynamic assignment — copy those
+// values here when you want to hardcode them.
+const USE_DYNAMIC_ASSIGNMENT = true
+
+let blackParts         = [0]                              // black in normal, glow PURPLE in xray
+let blackPartsMetallic = []                              // subset of blackParts with a metallic finish
+let greenParts         = [1]                              // green LED
+let whiteParts         = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]  // white plastic (everything else)
+
+/* ─────────────────────────── camera ───────────────────────────────── */
+const CAMERA_DISTANCE = 2  // × modelSize — decrease to start closer, increase to zoom out
 
 /* ─────────────────────────── refs & state ─────────────────────────── */
 const canvasRef = ref(null)
@@ -34,38 +53,21 @@ let normalScene, xrayScene, compositingMesh, orthoCamera, orthoScene
 let isDragging = false, lastMouse = { x: 0, y: 0 }
 let rotVel = { x: 0, y: 0 }, autoRotate = true, autoRotateTimer = null
 let spherical = { theta: 0, phi: Math.PI / 2, radius: 5 }
-let modelSize = 1
-let minZoom = 0.5
-let maxZoom = 2
+let modelSize = 1, minZoom = 0.5, maxZoom = 2
 let mousePos = { x: 0.5, y: 0.5 }
-let mouseVel = { x: 0, y: 0 }
 
-/* ─────────────────────────── fluid simulation ─────────────────────── */
-let fluidCanvas, fluidCtx
-let fluidTexture
-let prevMousePos = { x: 0.5, y: 0.5 }
+/* ─────────────────────────── fluid simulation state ───────────────── */
+let fluidCanvas, fluidCtx, fluidTexture
 const fluidTrail = []
 const maxTrailLength = 12
-let animTime = 0  // For organic edge animation
+let animTime = 0
 
 /* ─────────────────────────── material storage ─────────────────────── */
 let normalMaterials = new Map()
 let xrayMaterials = new Map()
 let glassMaterials = new Map()
 
-/* ─────────────────────────── part color assignments ───────────────── */
-// Define which parts get which colors - edit these arrays to customize
-// Based on the tinyColors pattern: small parts cycle through [black, green, white×5]
-// Set USE_DYNAMIC_ASSIGNMENT = true to auto-populate based on model, false to use hardcoded values
-const USE_DYNAMIC_ASSIGNMENT = true
-
-// Hardcoded defaults (edit these part numbers as needed):
-let blackParts = [0]           // Black parts (glow purple in X-ray mode)
-let blackPartsMetallic = []    // Subset of black with higher metalness/roughness
-let greenParts = [1]           // Green parts
-let whiteParts = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]  // White plastic parts
-
-/* ─────────────────────────── custom shaders ───────────────────────── */
+/* ─────────────────────────── shaders ──────────────────────────────── */
 const compositingFragmentShader = `
 uniform sampler2D normalTexture;
 uniform sampler2D xrayTexture;
@@ -119,7 +121,7 @@ void main() {
 }
 `
 
-/* ─────────────────────────── material management ───────────────────── */
+/* ─────────────────────────── material mode switching ──────────────── */
 function switchToNormalMode() {
   if (!model) return
   model.traverse((child) => {
@@ -132,30 +134,24 @@ function switchToNormalMode() {
 function switchToGlassMode() {
   if (!model) return
 
-  // Get all meshes to determine indices
   const meshes = []
   model.traverse((c) => { if (c.isMesh) meshes.push(c) })
 
   model.traverse((child) => {
     if (child.isMesh) {
       if (!glassMaterials.has(child)) {
-        // Find which part index this is
-        const partIndex = meshes.indexOf(child)
-        const isBlackPart = blackParts.includes(partIndex)
-
-        const purpleColor = 0x8210c1
+        const isBlack = blackParts.includes(meshes.indexOf(child))
         const glassMat = new THREE.MeshStandardMaterial({
-          color: isBlackPart ? purpleColor : 0xe0e0e0,
+          color: isBlack ? PURPLE : XRAY_BODY,
           metalness: 0.0,
           roughness: 0.7,
           transparent: true,
           opacity: 0.4,
           side: THREE.DoubleSide,
           depthWrite: false,
-          emissive: isBlackPart ? purpleColor : 0x000000,
-          emissiveIntensity: isBlackPart ? 0.8 : 0
+          emissive: isBlack ? PURPLE : 0x000000,
+          emissiveIntensity: isBlack ? 0.8 : 0
         })
-
         glassMaterials.set(child, glassMat)
       }
       child.material = glassMaterials.get(child)
@@ -163,7 +159,7 @@ function switchToGlassMode() {
   })
 }
 
-/* ─────────────────────────── init ────────────────────────────────── */
+/* ─────────────────────────── init ─────────────────────────────────── */
 async function init() {
   THREE = await import('three').then(m => m.default ?? m)
   const { GLTFLoader: Loader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
@@ -177,7 +173,7 @@ async function init() {
   camera = new THREE.PerspectiveCamera(75, W / H, 0.1, 200)
   updateCameraPosition()
 
-  /* Renderer with enhanced settings */
+  /* Renderer */
   renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -192,7 +188,7 @@ async function init() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.3
 
-  /* Create render targets for dual-scene rendering */
+  /* Render targets for dual-scene compositing */
   const targetW = W * window.devicePixelRatio
   const targetH = H * window.devicePixelRatio
 
@@ -218,7 +214,7 @@ async function init() {
   xrayScene = new THREE.Scene()
   xrayScene.background = new THREE.Color(0xffffff)
 
-  /* Enhanced lighting setup */
+  /* Lighting */
   function addLights(targetScene, intensity = 1.0) {
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.0 * intensity)
     targetScene.add(ambientLight)
@@ -256,160 +252,133 @@ async function init() {
     (gltf) => {
       model = gltf.scene
 
-      // Calculate part sizes (exact ThreeSceneAdvanced logic)
+      /* Compute bounding-box volumes for size-based part classification */
       const partSizes = new Map()
       model.traverse((child) => {
         if (child.isMesh) {
           const box = new THREE.Box3().setFromObject(child)
           const size = box.getSize(new THREE.Vector3())
-          const volume = size.x * size.y * size.z
-          partSizes.set(child, volume)
+          partSizes.set(child, size.x * size.y * size.z)
         }
       })
 
       const volumes = Array.from(partSizes.values()).sort((a, b) => a - b)
       const smallThreshold = volumes[Math.floor(volumes.length * 0.3)]
 
+      // Small parts cycle through these identification colours
       const tinyColors = [
         0x000000, 0x00ff00, 0xffffff, 0xffffff,
         0xffffff, 0xffffff, 0xffffff, 0xa8d8ea,
       ]
       let colorIndex = 0
 
-      // Collect meshes to track indices
       const normalMeshes = []
-      model.traverse((child) => {
-        if (child.isMesh) normalMeshes.push(child)
-      })
+      model.traverse((c) => { if (c.isMesh) normalMeshes.push(c) })
 
-      // Optionally determine color assignments dynamically
       if (USE_DYNAMIC_ASSIGNMENT) {
-        // Reset arrays for dynamic assignment
-        blackParts = []
+        blackParts         = []
         blackPartsMetallic = []
-        greenParts = []
-        whiteParts = []
+        greenParts         = []
+        whiteParts         = []
 
-        normalMeshes.forEach((child, meshIndex) => {
-          const originalMat = child.material
+        normalMeshes.forEach((child, i) => {
           const volume = partSizes.get(child)
 
           if (volume <= smallThreshold) {
             const color = tinyColors[colorIndex % tinyColors.length]
-
-            // Categorize by color
-            if (color === 0x000000) blackParts.push(meshIndex)
-            else if (color === 0x00ff00) greenParts.push(meshIndex)
-            else whiteParts.push(meshIndex)
-
+            if (color === 0x000000)      blackParts.push(i)
+            else if (color === 0x00ff00) greenParts.push(i)
+            else                         whiteParts.push(i)
             colorIndex++
-          } else if (originalMat.metalness === 1) {
-            blackParts.push(meshIndex)
-            blackPartsMetallic.push(meshIndex)  // Track metallic black parts separately
+          } else if (child.material.metalness === 1) {
+            blackParts.push(i)
+            blackPartsMetallic.push(i)
           } else {
-            whiteParts.push(meshIndex)
+            whiteParts.push(i)
           }
         })
 
-        // Log color assignments for easy hardcoding
-        console.log('ThreeSwitch part assignments:')
-        console.log('  blackParts:', blackParts, '// All black parts (glow purple in X-ray)')
-        console.log('  blackPartsMetallic:', blackPartsMetallic, '// Black parts with metallic finish')
-        console.log('  greenParts:', greenParts, '// Green parts')
-        console.log('  whiteParts:', whiteParts, '// White plastic parts')
+        // console.log('ThreeSwitch part assignments:')
+        // console.log('  blackParts:', blackParts, '// black in normal, glow PURPLE in xray')
+        // console.log('  blackPartsMetallic:', blackPartsMetallic, '// subset with metallic finish')
+        // console.log('  greenParts:', greenParts, '// green LED')
+        // console.log('  whiteParts:', whiteParts, '// white plastic')
       }
 
-      // Create materials for normal scene based on color assignments
-      normalMeshes.forEach((child, meshIndex) => {
+      // console.log('ThreeSwitch meshes:')
+      // normalMeshes.forEach((c, i) => console.log(`  [${i}] name="${c.name}" parent="${c.parent?.name}"`))
+
+      /* Normal scene materials */
+      normalMeshes.forEach((child, i) => {
         child.castShadow = true
         child.receiveShadow = true
+        if (child.geometry) child.geometry.computeVertexNormals()
 
-        if (child.geometry) {
-          child.geometry.computeVertexNormals()
-        }
-
-        let normalMaterial
-
-        if (blackParts.includes(meshIndex)) {
-          // Black parts - check if metallic or not
-          if (blackPartsMetallic.includes(meshIndex)) {
-            normalMaterial = new THREE.MeshStandardMaterial({
-              color: 0x000000,
-              metalness: 0.2,
-              roughness: 0.4,
-              side: THREE.DoubleSide,
-            })
-          } else {
-            normalMaterial = new THREE.MeshStandardMaterial({
-              color: 0x000000,
-              metalness: 0.1,
-              roughness: 0.3,
-              side: THREE.DoubleSide,
-              envMapIntensity: 1.0
-            })
-          }
-        } else if (greenParts.includes(meshIndex)) {
-          normalMaterial = new THREE.MeshStandardMaterial({
-            color: 0x00ff00,
+        let mat
+        if (blackParts.includes(i)) {
+          mat = blackPartsMetallic.includes(i)
+            ? new THREE.MeshStandardMaterial({
+                color: NORMAL_BLACK,
+                metalness: 0.2,
+                roughness: 0.4,
+                side: THREE.DoubleSide,
+              })
+            : new THREE.MeshStandardMaterial({
+                color: NORMAL_BLACK,
+                metalness: 0.1,
+                roughness: 0.3,
+                side: THREE.DoubleSide,
+                envMapIntensity: 1.0
+              })
+        } else if (greenParts.includes(i)) {
+          mat = new THREE.MeshStandardMaterial({
+            color: NORMAL_GREEN,
             metalness: 0.1,
             roughness: 0.3,
             side: THREE.DoubleSide,
             envMapIntensity: 1.0
           })
         } else {
-          // White parts
-          normalMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
+          mat = new THREE.MeshStandardMaterial({
+            color: NORMAL_WHITE,
             metalness: 0.0,
             roughness: 0.35,
             side: THREE.DoubleSide,
           })
         }
 
-        child.material = normalMaterial
-        normalMaterials.set(child, normalMaterial)
+        child.material = mat
+        normalMaterials.set(child, mat)
       })
 
-      // Clone model for X-ray scene
+      /* X-ray scene — clone and apply transparent materials */
       const xrayModel = model.clone()
-
-      // Collect xray meshes
       const xrayMeshes = []
-      xrayModel.traverse((child) => {
-        if (child.isMesh) xrayMeshes.push(child)
-      })
+      xrayModel.traverse((c) => { if (c.isMesh) xrayMeshes.push(c) })
 
-      // Create frosted glass X-ray materials
-      for (let i = 0; i < xrayMeshes.length; i++) {
-        const child = xrayMeshes[i]
+      xrayMeshes.forEach((child, i) => {
         child.castShadow = true
         child.receiveShadow = true
+        if (child.geometry) child.geometry.computeVertexNormals()
 
-        if (child.geometry) {
-          child.geometry.computeVertexNormals()
-        }
-
-        // Black parts glow purple in X-ray mode
-        const isBlackPart = blackParts.includes(i)
-        const purpleColor = 0x8210c1
-
-        const xrayMat = new THREE.MeshStandardMaterial({
-          color: isBlackPart ? purpleColor : 0xe0e0e0,  // Purple for black parts, gray for rest
+        const isBlack = blackParts.includes(i)
+        const mat = new THREE.MeshStandardMaterial({
+          color: isBlack ? PURPLE : XRAY_BODY,
           metalness: 0.0,
-          roughness: 0.7,
+          roughness: 0.85,
           transparent: true,
-          opacity: 0.4,
+          opacity: 0.6,
           side: THREE.DoubleSide,
           depthWrite: false,
-          emissive: isBlackPart ? purpleColor : 0x000000,  // Glowing purple for black parts
-          emissiveIntensity: isBlackPart ? 0.8 : 0.0
+          emissive: isBlack ? PURPLE : 0x000000,
+          emissiveIntensity: isBlack ? 0.8 : 0.0
         })
 
-        child.material = xrayMat
-        xrayMaterials.set(child, xrayMat)
-      }
+        child.material = mat
+        xrayMaterials.set(child, mat)
+      })
 
-      // Center models
+      /* Center models */
       const box = new THREE.Box3().setFromObject(model)
       const center = box.getCenter(new THREE.Vector3())
       model.position.sub(center)
@@ -417,19 +386,14 @@ async function init() {
 
       const size = box.getSize(new THREE.Vector3())
       modelSize = Math.max(size.x, size.y, size.z)
-
-      spherical.radius = modelSize * 2
+      spherical.radius = modelSize * CAMERA_DISTANCE
       minZoom = modelSize * 1.2
       maxZoom = modelSize * 4
-
       updateCameraPosition()
 
-      // Add to scenes
       normalScene.add(model)
       xrayScene.add(xrayModel)
-
       loading.value = false
-
       initFluidSimulation()
       animate()
     },
@@ -440,7 +404,7 @@ async function init() {
     }
   )
 
-  // Event listeners
+  /* Event listeners */
   window.addEventListener('resize', onResize)
   canvas.addEventListener('mousedown', onMouseDown)
   canvas.addEventListener('mousemove', onMouseMove)
@@ -491,21 +455,17 @@ function updateFluidSimulation() {
   fluidCtx.fillRect(0, 0, fluidCanvas.width, fluidCanvas.height)
 
   fluidTrail.push({ x: mousePos.x, y: mousePos.y })
-  if (fluidTrail.length > maxTrailLength) {
-    fluidTrail.shift()
-  }
+  if (fluidTrail.length > maxTrailLength) fluidTrail.shift()
 
   fluidTrail.forEach((point, i) => {
     const progress = i / maxTrailLength
     const baseSize = progress * 35 + 12
     const alpha = progress
-
     const time = animTime
 
     const wave1 = Math.sin(point.x * Math.PI * 2 + time * 2) * 0.015
     const wave2 = Math.cos(point.y * Math.PI * 2 + time * 2) * 0.015
     const wave3 = Math.sin((point.x + point.y) * Math.PI + time * 1.5) * 0.01
-
     const flowX = wave1 + wave3
     const flowY = wave2 + wave3
 
@@ -515,11 +475,7 @@ function updateFluidSimulation() {
     const centerX = (point.x + flowX) * fluidCanvas.width
     const centerY = (1.0 - point.y + flowY) * fluidCanvas.height
 
-    const gradient = fluidCtx.createRadialGradient(
-      centerX, centerY, 0,
-      centerX, centerY, size
-    )
-
+    const gradient = fluidCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, size)
     gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.95})`)
     gradient.addColorStop(0.65, `rgba(255, 255, 255, ${alpha * 0.3})`)
     gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
@@ -528,23 +484,12 @@ function updateFluidSimulation() {
     fluidCtx.fillRect(0, 0, fluidCanvas.width, fluidCanvas.height)
   })
 
-  if (fluidTexture) {
-    fluidTexture.needsUpdate = true
-  }
-
-  prevMousePos.x = mousePos.x
-  prevMousePos.y = mousePos.y
+  if (fluidTexture) fluidTexture.needsUpdate = true
 }
 
 /* ─────────────────────────── animate ──────────────────────────────── */
 function animate() {
   animId = requestAnimationFrame(animate)
-
-  xrayMaterials.forEach((mat) => {
-    if (mat.uniforms) {
-      mat.uniforms.cameraPosition.value.copy(camera.position)
-    }
-  })
 
   if (autoRotate) {
     spherical.theta += 0.002
@@ -559,9 +504,6 @@ function animate() {
     rotVel.y *= 0.92
     updateCameraPosition()
   }
-
-  mouseVel.x *= 0.95
-  mouseVel.y *= 0.95
 
   updateFluidSimulation()
 
@@ -581,26 +523,23 @@ function animate() {
         fragmentShader: compositingFragmentShader,
         uniforms: {
           normalTexture: { value: renderTarget1.texture },
-          xrayTexture: { value: renderTarget2.texture },
-          fluidTexture: { value: fluidTexture },
+          xrayTexture:   { value: renderTarget2.texture },
+          fluidTexture:  { value: fluidTexture },
           mousePosition: { value: new THREE.Vector2(mousePos.x, mousePos.y) },
-          revealRadius: { value: 0.08 },
-          revealSoftness: { value: 0.04 },
-          resolution: { value: new THREE.Vector2(canvas.width, canvas.height) },
-          useFluid: { value: true }
+          revealRadius:  { value: 0.08 },
+          revealSoftness:{ value: 0.04 },
+          resolution:    { value: new THREE.Vector2(canvas.width, canvas.height) },
+          useFluid:      { value: true }
         }
       })
       compositingMesh = new THREE.Mesh(geometry, material)
-
       orthoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
       orthoScene = new THREE.Scene()
       orthoScene.add(compositingMesh)
     }
 
     compositingMesh.material.uniforms.mousePosition.value.set(mousePos.x, mousePos.y)
-    if (fluidTexture) {
-      compositingMesh.material.uniforms.fluidTexture.value = fluidTexture
-    }
+    if (fluidTexture) compositingMesh.material.uniforms.fluidTexture.value = fluidTexture
 
     renderer.render(orthoScene, orthoCamera)
   } else {
@@ -634,7 +573,6 @@ function onResize() {
   if (fluidCanvas) {
     const aspectRatio = W / H
     const baseRes = 1024
-
     if (aspectRatio >= 1) {
       fluidCanvas.width = baseRes
       fluidCanvas.height = baseRes / aspectRatio
@@ -642,10 +580,7 @@ function onResize() {
       fluidCanvas.width = baseRes * aspectRatio
       fluidCanvas.height = baseRes
     }
-
-    if (fluidTexture) {
-      fluidTexture.needsUpdate = true
-    }
+    if (fluidTexture) fluidTexture.needsUpdate = true
   }
 }
 
@@ -669,14 +604,8 @@ function onMouseMove(e) {
   const moveCanvas = canvasRef.value
   if (moveCanvas) {
     const rect = moveCanvas.getBoundingClientRect()
-    const x = (e.clientX - rect.left) / rect.width
-    const y = 1.0 - (e.clientY - rect.top) / rect.height
-
-    mousePos.x += (x - mousePos.x) * 0.15
-    mousePos.y += (y - mousePos.y) * 0.15
-
-    mouseVel.x = x - mousePos.x
-    mouseVel.y = y - mousePos.y
+    mousePos.x += ((e.clientX - rect.left) / rect.width - mousePos.x) * 0.15
+    mousePos.y += (1.0 - (e.clientY - rect.top) / rect.height - mousePos.y) * 0.15
   }
 }
 
@@ -687,8 +616,7 @@ function onMouseUp() {
 
 function onWheel(e) {
   e.preventDefault()
-  const delta = e.deltaY * 0.001
-  spherical.radius += delta * modelSize
+  spherical.radius += e.deltaY * 0.001 * modelSize
   spherical.radius = Math.max(minZoom, Math.min(maxZoom, spherical.radius))
   updateCameraPosition()
 }
@@ -708,15 +636,8 @@ function onTouchMove(e) {
 /* ─────────────────────────── mode switching ───────────────────────── */
 watch(() => props.mode, (newMode) => {
   if (!model) return
-
-  switch (newMode) {
-    case 'normal':
-      switchToNormalMode()
-      break
-    case 'glass':
-      switchToGlassMode()
-      break
-  }
+  if (newMode === 'normal') switchToNormalMode()
+  else if (newMode === 'glass') switchToGlassMode()
 })
 
 /* ─────────────────────────── lifecycle ────────────────────────────── */
@@ -739,11 +660,8 @@ onUnmounted(() => {
     model.traverse((child) => {
       if (child.geometry) child.geometry.dispose()
       if (child.material) {
-        if (Array.isArray(child.material)) {
-          child.material.forEach(mat => mat.dispose())
-        } else {
-          child.material.dispose()
-        }
+        if (Array.isArray(child.material)) child.material.forEach(m => m.dispose())
+        else child.material.dispose()
       }
     })
   }

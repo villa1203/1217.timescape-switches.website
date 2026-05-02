@@ -31,7 +31,7 @@ const activeColor = computed(() => {
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <StickerText
+    <StickerParagraph
       :text="text"
       :color="activeColor"
       :stroke_width="stroke_width"
@@ -48,7 +48,7 @@ const activeColor = computed(() => {
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <StickerText
+    <StickerParagraph
       :text="text"
       :color="activeColor"
       :stroke_width="stroke_width"
@@ -62,7 +62,7 @@ const activeColor = computed(() => {
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <StickerText
+    <StickerParagraph
       :text="text"
       :color="activeColor"
       :stroke_width="stroke_width"

@@ -4,7 +4,7 @@
 
       <!-- Top-left: shabbat countdown — same position as nav left -->
       <div class="overlay-corner overlay-corner--tl">
-        <StickerText :text="shabbatText" :font_size="24" :stroke_width="20" />
+        <StickerParagraph :text="shabbatText" :font_size="24" />
       </div>
 
       <!-- Top-right: Research + Info — same position as nav right -->
@@ -13,20 +13,19 @@
           text="Research"
           @click="toggle"
           :font_size="24"
-          :stroke_width="20"
           color="var(--app-color-secondary)"
         />
         <NuxtLink to="/info" @click="close" class="overlay-nav-link">
-          <StickerText text="Info" :font_size="24" :stroke_width="20" />
+          <StickerParagraph text="Info" :font_size="24" />
         </NuxtLink>
       </div>
 
       <!-- Bottom-left: footer text — same as homepage footer -->
       <div class="overlay-corner overlay-corner--bl">
-        <StickerText
+        <StickerParagraph
           :text="`Design Research On Ritual\nConstraints And Domestic Technology`"
           :font_size="24"
-          :stroke_width="20"
+          :max_width="FOOTER_TEXT_MAX_WIDTH"
         />
       </div>
 
@@ -49,7 +48,7 @@
             <span class="list-label">Origin</span>
 
             <div class="design-time">
-              <StickerText text="Design & Time" :font_size="32" :stroke_width="22" />
+              <StickerParagraph text="Design & Time" :font_size="32" />
             </div>
 
             <span class="list-label">Objects</span>
@@ -62,10 +61,10 @@
                 @mouseenter="activeObject = obj"
                 @mouseleave="activeObject = null"
               >
-                <StickerText
+                <StickerParagraph
                   :text="obj.label"
                   :font_size="38"
-                  :stroke_width="26"
+                  :line_height="1.0"
                   :color="activeObject?.id === obj.id ? 'var(--app-color-secondary)' : 'var(--app-color-primary)'"
                 />
               </li>
@@ -86,6 +85,9 @@ import { useResearchOverlay } from '~/composables/useResearchOverlay'
 
 const { isOpen, close, toggle } = useResearchOverlay()
 const { text: shabbatText } = useShabbatCountdown()
+
+/* ── layout constants — edit here ──────────────────────────────────── */
+const FOOTER_TEXT_MAX_WIDTH = 630  // px — "Design Research On Ritual..." column width
 
 const ThreeKettle    = defineAsyncComponent(() => import('./ThreeKettle.vue'))
 const ThreeSwitch    = defineAsyncComponent(() => import('./ThreeSwitch.vue'))
@@ -213,11 +215,12 @@ onUnmounted(() => {
   color: #820FC1;
   opacity: 1;
   padding-left: 0.0.5rem;
+  padding-bottom: 0.5rem;
   line-height: 1.6;
 }
 
 .design-time {
-  margin-bottom: 1.2rem;
+  margin-bottom: 0;
 }
 
 .objects-list {
@@ -227,12 +230,17 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0.3rem;
 }
 
 .objects-list__item {
   cursor: default;
   transition: transform 0.15s ease;
+
+  // Negative margin collapses the SVG blob padding so items sit at the same
+  // line-height rhythm as the old StickerText (svgHeight was fs*1.5 = ~57px;
+  // StickerParagraph at sw=37 produces ~116px — pull back ~48px per item).
+  & + & { margin-top: -48px; }
 
   &:hover {
     transform: translateX(-6px);

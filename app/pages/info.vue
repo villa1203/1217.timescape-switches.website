@@ -96,7 +96,7 @@
           Frosted Glass
         </button>
       </div>
-      <ThreeScene :mode="viewerMode" />
+      <ThreeSwitch :mode="viewerMode" />
     </div>
   </main>
 </template>
