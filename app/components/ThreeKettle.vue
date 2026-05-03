@@ -21,9 +21,9 @@ const props = defineProps({
 
 /* ─────────────────────────── colours ──────────────────────────────── */
 // Edit these hex values to quickly update all material colours.
-const PURPLE       = 0x8210c1  // xray glow — highlighted parts
+const PURPLE       = 0xBB55FF  // xray glow — highlighted parts
 const XRAY_BODY    = 0xe0e0e0  // xray — all non-highlighted parts (transparent grey)
-const NORMAL_METAL = 0x999999   // normal — light aluminum finish
+const NORMAL_METAL = 0xf5f5f5     // normal — light aluminum finish
 const NORMAL_BLACK = 0x000000  // normal — black plastic parts
 
 /* ─────────────────────────── part assignments ─────────────────────── */
@@ -144,8 +144,8 @@ function switchToGlassMode() {
           opacity: 0.4,
           side: THREE.DoubleSide,
           depthWrite: false,
-          emissive: isPurple ? PURPLE : 0x000000,
-          emissiveIntensity: isPurple ? 0.8 : 0
+          emissive: 0x000000,
+          emissiveIntensity: 0
         })
         glassMaterials.set(child, glassMat)
       }
@@ -323,11 +323,12 @@ async function init() {
           metalness: 0.0,
           roughness: 0.85,
           transparent: true,
-          opacity: 0.6,
+          opacity: isPurple ? 0.95 : 0.6,
           side: THREE.DoubleSide,
           depthWrite: false,
-          emissive: isPurple ? PURPLE : 0x000000,
-          emissiveIntensity: isPurple ? 0.8 : 0.0
+          depthTest: !isPurple,
+          emissive: 0x000000,
+          emissiveIntensity: 0
         })
 
         child.material = mat

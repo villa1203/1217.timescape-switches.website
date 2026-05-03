@@ -21,7 +21,7 @@ const props = defineProps({
 
 /* ─────────────────────────── colours ──────────────────────────────── */
 // Edit these hex values to quickly update all material colours.
-const PURPLE      = 0x8210c1  // xray glow — highlighted parts
+const PURPLE      = 0xBB55FF  // xray glow — highlighted parts
 const XRAY_BODY   = 0xe0e0e0  // xray — all non-highlighted parts (transparent grey)
 const NORMAL_WHITE = 0xffffff  // normal — default white plastic + glass panel
 
@@ -147,8 +147,8 @@ function switchToGlassMode() {
             opacity: 0.4,
             side: THREE.DoubleSide,
             depthWrite: false,
-            emissive: PURPLE,
-            emissiveIntensity: 0.8
+            emissive: 0x000000,
+            emissiveIntensity: 0
           })
         } else if (isGlassPart) {
           glassMat = new THREE.MeshStandardMaterial({
@@ -298,8 +298,8 @@ async function init() {
             opacity: 0.4,
             side: THREE.DoubleSide,
             depthWrite: false,
-            emissive: PURPLE,
-            emissiveIntensity: 0.8,
+            emissive: 0x000000,
+            emissiveIntensity: 0,
           })
         } else if (glassParts.includes(i)) {
           // Glass panel — semi-transparent white
@@ -349,8 +349,8 @@ async function init() {
             opacity: 0.6,
             side: THREE.DoubleSide,
             depthWrite: false,
-            emissive: PURPLE,
-            emissiveIntensity: 0.8
+            emissive: 0x000000,
+            emissiveIntensity: 0
           })
         } else if (isGlass) {
           mat = new THREE.MeshStandardMaterial({

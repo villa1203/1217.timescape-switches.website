@@ -32,13 +32,16 @@
       <!-- Body: left preview + right list -->
       <div class="overlay-body">
 
-        <!-- Left half: 3D model -->
+        <!-- Left half: 3D model — each component mounts once on first hover and stays alive -->
         <div class="overlay-preview">
-          <Transition name="scene">
-            <div v-if="activeObject" :key="activeObject.id" class="preview-mount">
-              <component :is="activeObject.component" mode="plain" />
+          <template v-for="obj in objects" :key="obj.id">
+            <div
+              v-if="mountedIds[obj.id]"
+              :class="['preview-mount', { 'is-active': activeObject?.id === obj.id }]"
+            >
+              <component :is="obj.component" mode="plain" />
             </div>
-          </Transition>
+          </template>
         </div>
 
         <!-- Right half: hierarchy + list -->
@@ -58,7 +61,7 @@
                 v-for="obj in objects"
                 :key="obj.id"
                 class="objects-list__item"
-                @mouseenter="activeObject = obj"
+                @mouseenter="onObjectEnter(obj)"
                 @mouseleave="activeObject = null"
               >
                 <StickerParagraph
@@ -106,6 +109,12 @@ const objects = [
 ]
 
 const activeObject = ref<typeof objects[0] | null>(null)
+const mountedIds   = ref<Record<string, boolean>>({})
+
+function onObjectEnter(obj: typeof objects[0]) {
+  mountedIds.value[obj.id] = true
+  activeObject.value = obj
+}
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') close()
@@ -115,6 +124,12 @@ watch(isOpen, (val) => {
   if (val) {
     document.addEventListener('keydown', onKeydown)
     document.body.style.overflow = 'hidden'
+    import('./ThreeKettle.vue')
+    import('./ThreeSwitch.vue')
+    import('./ThreeFridge.vue')
+    import('./ThreeElevator.vue')
+    import('./ThreePlugtimer.vue')
+    import('./ThreeLamp.vue')
   } else {
     document.removeEventListener('keydown', onKeydown)
     document.body.style.overflow = ''
@@ -187,6 +202,14 @@ onUnmounted(() => {
 .preview-mount {
   position: absolute;
   inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+
+  &.is-active {
+    opacity: 1;
+    pointer-events: auto;
+  }
 
   :deep(.scene-wrapper) {
     height: 100% !important;
@@ -247,9 +270,4 @@ onUnmounted(() => {
   }
 }
 
-/* ── 3D scene transition ── */
-.scene-enter-active { transition: opacity 0.25s ease; }
-.scene-leave-active  { transition: opacity 0.15s ease; }
-.scene-enter-from,
-.scene-leave-to      { opacity: 0; }
 </style>
