@@ -2,10 +2,10 @@
     <footer class="v-app-footer app-with-padding--top-bottom"
     >
       <div class="v-app-footer__container app-grid app-grid--justify-between app-grid--direction-column">
-        <StickerText
+        <StickerParagraph
           :text="`Design Research On Ritual\nConstraints And Domestic Technology`"
           :font_size="24"
-          :stroke_width="20"
+          :max_width="FOOTER_TEXT_MAX_WIDTH"
         />
       </div>
 
@@ -17,11 +17,8 @@
 
 
 <script setup lang="ts">
-import { defineProps } from 'vue'
-
-defineProps<{
-    message?: string
-}>()
+/* ── layout constants — edit here ──────────────────────────────────── */
+const FOOTER_TEXT_MAX_WIDTH = 630  // px — column width for "Design Research On Ritual..."
 </script>
 
 
