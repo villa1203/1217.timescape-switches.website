@@ -188,7 +188,6 @@ function switchToGlassMode() {
 async function init() {
   THREE = await import('three').then(m => m.default ?? m)
   const { GLTFLoader: Loader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
-  const { MeshoptDecoder } = await import('three/examples/jsm/libs/meshopt_decoder.module.js')
   GLTFLoader = Loader
 
   canvas = canvasRef.value
@@ -275,7 +274,6 @@ async function init() {
 
   /* Load GLB model */
   const loader = new GLTFLoader()
-  loader.setMeshoptDecoder(MeshoptDecoder)
   loader.load(
     '/fridge.glb',
     (gltf) => {
