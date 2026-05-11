@@ -8,11 +8,18 @@
         <div class="loader-ring" />
       </div>
     </Transition>
+
+    <!-- Dev-only perf HUD -->
+    <div v-if="isDev" class="perf-hud">{{ fps }}fps {{ frameMs }}ms</div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useFrameStats } from '~/composables/useFrameStats'
+
+const isDev = import.meta.env.DEV
+const { fps, frameMs } = isDev ? useFrameStats() : { fps: { value: 0 }, frameMs: { value: 0 } }
 
 /* ─────────────────────────── props ────────────────────────────────── */
 const props = defineProps({
@@ -180,7 +187,7 @@ async function init() {
     alpha: false,
     powerPreference: 'high-performance'
   })
-  renderer.setPixelRatio(window.devicePixelRatio)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(W, H, false)
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
@@ -189,21 +196,21 @@ async function init() {
   renderer.toneMappingExposure = 1.3
 
   /* Render targets for dual-scene compositing */
-  const targetW = W * window.devicePixelRatio
-  const targetH = H * window.devicePixelRatio
+  const targetW = W * Math.min(window.devicePixelRatio, 2)
+  const targetH = H * Math.min(window.devicePixelRatio, 2)
 
   renderTarget1 = new THREE.WebGLRenderTarget(targetW, targetH, {
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
     format: THREE.RGBAFormat,
-    samples: 8
+    samples: 4
   })
 
   renderTarget2 = new THREE.WebGLRenderTarget(targetW, targetH, {
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
     format: THREE.RGBAFormat,
-    samples: 8
+    samples: 4
   })
 
   /* Normal Scene */
@@ -215,18 +222,20 @@ async function init() {
   xrayScene.background = new THREE.Color(0xffffff)
 
   /* Lighting */
-  function addLights(targetScene, intensity = 1.0) {
+  function addLights(targetScene, intensity = 1.0, enableShadows = true) {
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.0 * intensity)
     targetScene.add(ambientLight)
 
     const keyLight = new THREE.DirectionalLight(0xffffff, 2.5 * intensity)
     keyLight.position.set(5, 8, 10)
-    keyLight.castShadow = true
-    keyLight.shadow.mapSize.width = 4096
-    keyLight.shadow.mapSize.height = 4096
-    keyLight.shadow.camera.near = 0.5
-    keyLight.shadow.camera.far = 50
-    keyLight.shadow.bias = -0.00001
+    keyLight.castShadow = enableShadows
+    if (enableShadows) {
+      keyLight.shadow.mapSize.width = 1024
+      keyLight.shadow.mapSize.height = 1024
+      keyLight.shadow.camera.near = 0.5
+      keyLight.shadow.camera.far = 50
+      keyLight.shadow.bias = -0.00001
+    }
     targetScene.add(keyLight)
 
     const fillLight = new THREE.DirectionalLight(0xffffff, 1.5 * intensity)
@@ -243,7 +252,7 @@ async function init() {
   }
 
   addLights(normalScene, 1.0)
-  addLights(xrayScene, 1.0)
+  addLights(xrayScene,   1.0, false)
 
   /* Load GLB model */
   const loader = new GLTFLoader()
@@ -558,8 +567,8 @@ function onResize() {
   camera.updateProjectionMatrix()
   renderer.setSize(W, H, false)
 
-  const targetW = W * window.devicePixelRatio
-  const targetH = H * window.devicePixelRatio
+  const targetW = W * Math.min(window.devicePixelRatio, 2)
+  const targetH = H * Math.min(window.devicePixelRatio, 2)
 
   if (renderTarget1) {
     renderTarget1.setSize(targetW, targetH)
@@ -708,4 +717,18 @@ onUnmounted(() => {
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.perf-hud {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font: 11px/1 monospace;
+  color: #00ff88;
+  background: rgba(0,0,0,0.55);
+  padding: 3px 6px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 100;
+  user-select: none;
+}
 </style>
