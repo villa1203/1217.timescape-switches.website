@@ -56,13 +56,12 @@
 
             <span class="list-label">Objects</span>
 
-            <ul class="objects-list">
+            <ul class="objects-list" @mouseleave="activeObject = null">
               <li
                 v-for="obj in objects"
                 :key="obj.id"
                 class="objects-list__item"
                 @mouseenter="onObjectEnter(obj)"
-                @mouseleave="activeObject = null"
               >
                 <StickerParagraph
                   :text="obj.label"
@@ -258,12 +257,25 @@ onUnmounted(() => {
 
 .objects-list__item {
   cursor: default;
+  position: relative;
   transition: transform 0.15s ease;
 
   // Negative margin collapses the SVG blob padding so items sit at the same
   // line-height rhythm as the old StickerText (svgHeight was fs*1.5 = ~57px;
   // StickerParagraph at sw=37 produces ~116px — pull back ~48px per item).
   & + & { margin-top: -48px; }
+
+  // Reverse default DOM stacking so earlier items win pointer events in the
+  // overlap zone — without this, going UP the list has a 48px dead zone.
+  &:nth-child(1) { z-index: 6; }
+  &:nth-child(2) { z-index: 5; }
+  &:nth-child(3) { z-index: 4; }
+  &:nth-child(4) { z-index: 3; }
+  &:nth-child(5) { z-index: 2; }
+  &:nth-child(6) { z-index: 1; }
+
+  // SVG content must not intercept pointer events — only the <li> box does.
+  :deep(svg) { pointer-events: none; }
 
   &:hover {
     transform: translateX(-6px);
