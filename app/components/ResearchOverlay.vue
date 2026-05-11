@@ -39,7 +39,7 @@
               v-if="mountedIds[obj.id]"
               :class="['preview-mount', { 'is-active': activeObject?.id === obj.id }]"
             >
-              <component :is="obj.component" mode="plain" />
+              <component :is="obj.component" mode="plain" :paused="activeObject?.id !== obj.id" />
             </div>
           </template>
         </div>

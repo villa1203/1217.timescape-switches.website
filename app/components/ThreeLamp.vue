@@ -16,7 +16,8 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 
 /* ─────────────────────────── props ────────────────────────────────── */
 const props = defineProps({
-  mode: { type: String, default: 'normal' }  // 'normal' | 'glass'
+  mode: { type: String, default: 'normal' },  // 'normal' | 'glass'
+  paused: { type: Boolean, default: false }
 })
 
 /* ─────────────────────────── colours ──────────────────────────────── */
@@ -53,6 +54,8 @@ let fluidCanvas, fluidCtx, fluidTexture
 const fluidTrail = []
 const maxTrailLength = 12
 let animTime = 0
+let renderRequested = false
+let fluidDecayFrames = 0
 
 /* ─────────────────────────── material storage ─────────────────────── */
 let normalMaterials = new Map()
@@ -314,7 +317,7 @@ async function init() {
       xrayScene.add(xrayModel)
       loading.value = false
       initFluidSimulation()
-      animate()
+      requestRender()
     },
     undefined,
     (error) => {
@@ -407,8 +410,15 @@ function updateFluidSimulation() {
 }
 
 /* ─────────────────────────── animate ──────────────────────────────── */
-function animate() {
+function requestRender() {
+  if (props.paused || renderRequested) return
+  renderRequested = true
   animId = requestAnimationFrame(animate)
+}
+
+function animate() {
+  renderRequested = false
+  if (fluidDecayFrames > 0) fluidDecayFrames--
 
   if (autoRotate) {
     spherical.theta += 0.002
@@ -465,6 +475,12 @@ function animate() {
     renderer.setRenderTarget(null)
     renderer.render(normalScene, camera)
   }
+
+  const needsLoop = autoRotate
+    || Math.abs(rotVel.x) > 0.001
+    || Math.abs(rotVel.y) > 0.001
+    || fluidDecayFrames > 0
+  if (needsLoop) requestRender()
 }
 
 /* ─────────────────────────── resize ───────────────────────────────── */
@@ -501,6 +517,7 @@ function onResize() {
     }
     if (fluidTexture) fluidTexture.needsUpdate = true
   }
+  requestRender()
 }
 
 /* ─────────────────────────── mouse / touch ────────────────────────── */
@@ -512,6 +529,8 @@ function onMouseDown(e) {
 }
 
 function onMouseMove(e) {
+  fluidDecayFrames = 40
+  requestRender()
   if (isDragging) {
     const dx = e.clientX - lastMouse.x
     const dy = e.clientY - lastMouse.y
@@ -530,7 +549,7 @@ function onMouseMove(e) {
 
 function onMouseUp() {
   isDragging = false
-  autoRotateTimer = setTimeout(() => { autoRotate = true }, 2500)
+  autoRotateTimer = setTimeout(() => { autoRotate = true; requestRender() }, 2500)
 }
 
 function onWheel(e) {
@@ -538,6 +557,7 @@ function onWheel(e) {
   spherical.radius += e.deltaY * 0.001 * modelSize
   spherical.radius = Math.max(minZoom, Math.min(maxZoom, spherical.radius))
   updateCameraPosition()
+  requestRender()
 }
 
 let touchStart = null
@@ -557,6 +577,18 @@ watch(() => props.mode, (newMode) => {
   if (!model) return
   if (newMode === 'normal') switchToNormalMode()
   else if (newMode === 'glass') switchToGlassMode()
+})
+
+watch(() => props.paused, (isPaused) => {
+  if (isPaused) {
+    cancelAnimationFrame(animId)
+    animId = 0
+    renderRequested = false
+    fluidDecayFrames = 0
+    fluidTrail.length = 0
+  } else if (renderer) {
+    requestRender()
+  }
 })
 
 /* ─────────────────────────── lifecycle ────────────────────────────── */
