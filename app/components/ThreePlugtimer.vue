@@ -8,13 +8,20 @@
         <div class="loader-ring" />
       </div>
     </Transition>
+
+    <!-- Dev-only perf HUD -->
+    <div v-if="isDev" class="perf-hud">{{ fps }}fps {{ frameMs }}ms</div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useFrameStats } from '~/composables/useFrameStats'
 
 /* ─────────────────────────── props ────────────────────────────────── */
+const isDev = import.meta.env.DEV
+const { fps, frameMs } = isDev ? useFrameStats() : { fps: { value: 0 }, frameMs: { value: 0 } }
+
 const props = defineProps({
   mode: { type: String, default: 'normal' },  // 'normal' | 'glass'
   paused: { type: Boolean, default: false }
@@ -711,4 +718,18 @@ onUnmounted(() => {
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.perf-hud {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font: 11px/1 monospace;
+  color: #00ff88;
+  background: rgba(0,0,0,0.55);
+  padding: 3px 6px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 100;
+  user-select: none;
+}
 </style>
