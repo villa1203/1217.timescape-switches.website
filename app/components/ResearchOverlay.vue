@@ -247,34 +247,25 @@ onUnmounted(() => {
 
 .objects-list {
   list-style: none;
-  padding: 0;
+  padding: 0 0 48px; // bottom pad so last item's SVG overflow isn't clipped
   margin: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.3rem;
+  gap: 0;
 }
 
 .objects-list__item {
   cursor: default;
   position: relative;
+  // Fixed hit zone height = desired visual pitch (116px SVG − 48px visual collapse).
+  // SVG overflows visually into the next item's space, creating the stacked look,
+  // but the DOM boxes are non-overlapping so mouseenter/leave are unambiguous.
+  height: 68px;
+  overflow: visible;
   transition: transform 0.15s ease;
 
-  // Negative margin collapses the SVG blob padding so items sit at the same
-  // line-height rhythm as the old StickerText (svgHeight was fs*1.5 = ~57px;
-  // StickerParagraph at sw=37 produces ~116px — pull back ~48px per item).
-  & + & { margin-top: -48px; }
-
-  // Reverse default DOM stacking so earlier items win pointer events in the
-  // overlap zone — without this, going UP the list has a 48px dead zone.
-  &:nth-child(1) { z-index: 6; }
-  &:nth-child(2) { z-index: 5; }
-  &:nth-child(3) { z-index: 4; }
-  &:nth-child(4) { z-index: 3; }
-  &:nth-child(5) { z-index: 2; }
-  &:nth-child(6) { z-index: 1; }
-
-  // SVG content must not intercept pointer events — only the <li> box does.
+  // SVG overflow must not intercept events destined for the item below.
   :deep(svg) { pointer-events: none; }
 
   &:hover {
