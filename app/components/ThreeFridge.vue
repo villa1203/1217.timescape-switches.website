@@ -209,7 +209,7 @@ async function init() {
   renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
-    alpha: false,
+    alpha: true,
     powerPreference: 'high-performance'
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -240,11 +240,11 @@ async function init() {
 
   /* Normal Scene */
   normalScene = new THREE.Scene()
-  normalScene.background = new THREE.Color(0xffffff)
+  normalScene.background = null
 
   /* X-ray Scene */
   xrayScene = new THREE.Scene()
-  xrayScene.background = new THREE.Color(0xffffff)
+  xrayScene.background = null
 
   /* Lighting */
   function addLights(targetScene, intensity = 1.0, enableShadows = true) {
@@ -402,7 +402,7 @@ async function init() {
       modelSize = Math.max(size.x, size.y, size.z)
       spherical.radius = modelSize * CAMERA_DISTANCE
       minZoom = modelSize * 1.2
-      maxZoom = modelSize * 4
+      maxZoom = modelSize * CAMERA_DISTANCE
       updateCameraPosition()
 
       normalScene.add(model)
@@ -716,7 +716,7 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   height: 100vh;
-  background: #ffffff;
+  background: transparent;
   overflow: hidden;
 }
 
@@ -732,7 +732,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  background: transparent;
   z-index: 10;
 }
 
