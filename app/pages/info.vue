@@ -81,23 +81,9 @@
     </AppLayoutColumns>
 
     <!-- 3D Viewer Section -->
-    <div class="viewer-section">
-      <div class="viewer-controls">
-        <button
-          @click="viewerMode = 'normal'"
-          :class="{ active: viewerMode === 'normal' }"
-        >
-          Normal (hover to see inside)
-        </button>
-        <button
-          @click="viewerMode = 'glass'"
-          :class="{ active: viewerMode === 'glass' }"
-        >
-          Frosted Glass
-        </button>
-      </div>
+    <!-- <div class="viewer-section">
       <ThreeSwitch :mode="viewerMode" />
-    </div>
+    </div> -->
   </main>
 </template>
 
@@ -108,7 +94,6 @@ import type {CMS_API_Response, CMS_BlockData} from "#shared/cms_api";
 import AppLayoutColumns from "~/components/AppLayoutColumns.vue";
 
 const viewerMode = ref('normal')
-const viewerVersion = ref("standard") // "standard" or "advanced"
 
 type FetchData = CMS_API_Response & {
   "result": {

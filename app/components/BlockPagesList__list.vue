@@ -1,6 +1,6 @@
 <template>
   <div class="v-block block-page-list--list app-with-padding--left-right app-rm-child-margin">
-    <h2>{{block_data.content.title}}</h2>
+    <h2 v-if="block_data.content.title"><StickerParagraph :text="block_data.content.title" /></h2>
 
     <AppProjectsPreview__list
       v-if="block_data.content.pages_liste"

@@ -1,5 +1,5 @@
 <template>
-	<section v-if="block_data.content.image"
+	<section v-if="block_data.content.image?.large?.url"
            class="v-block block-image"
            :class="{
               'is-full':      block_data.content.toggle_is_full === 'true',
@@ -9,65 +9,48 @@
            }"
   >
 		<header v-if="block_data.content.title">
-			<h2 class="h2 purple">{{ block_data.content.title }}</h2>
+			<h2 class="h2 purple"><StickerParagraph :text="block_data.content.title" /></h2>
 		</header>
-		<figure>
-			<img :src="block_data.content.image.large.url" :alt="block_data.content.image.alt || 'image'">
-			<figcaption v-if="block_data.content.caption || block_data.content.credits"
-      >
-				<div v-if="block_data.content.caption" class="app-text-strong" v-html="block_data.content.caption"></div>
-				<div v-if="block_data.content.credits" v-html="block_data.content.credits"></div>
-			</figcaption>
-		</figure>
+		<ObjectImage
+		  :src="block_data.content.image.large.url"
+		  :alt="block_data.content.image.alt || 'image'"
+		  :caption="captionHtml"
+		/>
 	</section>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type {CMS_BlockImageData} from "#shared/cms_api"
 
-defineProps<{
+const props = defineProps<{
   block_data: CMS_BlockImageData
 }>()
+
+const captionHtml = computed(() => {
+  const parts: string[] = []
+  if (props.block_data.content.caption) {
+    parts.push(`<div class="app-text-strong">${props.block_data.content.caption}</div>`)
+  }
+  if (props.block_data.content.credits) {
+    parts.push(`<div>${props.block_data.content.credits}</div>`)
+  }
+  return parts.join('')
+})
 </script>
 
 <style scoped lang="scss">
 .block-image {
-  width: calc( ((100% + var(--app-grid-gap) ) / 2) - var(--app-grid-gap));
+  width: 100%;
   box-sizing: border-box;
-  overflow: hidden;
-
-  &.has-gap-left {
-    margin-left: 50%;
-  }
-
-  &.is-full {
-    width: 100%;
-  }
-
-  &.is-large {
-    width: 100%;
-    padding-left: var(--app-grid-gap);
-    padding-right: var(--app-grid-gap);
-  }
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-figure {
-  box-sizing: border-box;
-  display: block;
-  width: 100%;
-  margin: 0;
-}
-
-img {
-  box-sizing: border-box;
-  display: block;
-  width: 100%;
-  margin: 0;
-
-  .has-ratio-1-1 & {
-    aspect-ratio: 1/1;
-    object-fit: cover;
-  }
+.has-ratio-1-1 :deep(.object-image__img) {
+  aspect-ratio: 1/1;
+  object-fit: cover;
 }
 
 </style>

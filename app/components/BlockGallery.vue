@@ -2,7 +2,7 @@
 	<section class="v-block block-gallery"
   >
 		<header v-if="block_data.content.title">
-			<h2 class="h2 purple">{{ block_data.content.title }}</h2>
+			<h2 class="h2 purple"><StickerParagraph :text="block_data.content.title" /></h2>
 		</header>
 
     <div class="app-grid app-grid--wrap">

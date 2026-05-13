@@ -12,7 +12,7 @@
             :class="{
                 'app-text-align-center': !block_data.content.text
             }"
-          >{{ block_data.content.title }}</h2>
+          ><StickerParagraph :text="block_data.content.title" /></h2>
         </div>
       </header>
 

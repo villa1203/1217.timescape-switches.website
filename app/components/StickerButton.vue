@@ -9,18 +9,15 @@ const props = defineProps<{
   hoverColor?: string
   stroke_width?: number
   font_size?: number
+  active?: boolean
 }>()
 
 const isHovered = ref(false)
 const isNuxtLink = computed(() => !!props.to)
 const isExternalLink = computed(() => !!props.href)
 
-const activeColor = computed(() => {
-  if (isHovered.value) {
-    return props.hoverColor || 'var(--app-color-secondary)'
-  }
-  return props.color || 'var(--app-color-primary)'
-})
+const baseColor = computed(() => props.color || 'var(--app-color-primary)')
+const isInverted = computed(() => isHovered.value || !!props.active)
 </script>
 
 <template>
@@ -33,7 +30,8 @@ const activeColor = computed(() => {
   >
     <StickerParagraph
       :text="text"
-      :color="activeColor"
+      :color="baseColor"
+      :inverted="isInverted"
       :stroke_width="stroke_width"
       :font_size="font_size"
     />
@@ -50,7 +48,8 @@ const activeColor = computed(() => {
   >
     <StickerParagraph
       :text="text"
-      :color="activeColor"
+      :color="baseColor"
+      :inverted="isInverted"
       :stroke_width="stroke_width"
       :font_size="font_size"
     />
@@ -64,7 +63,8 @@ const activeColor = computed(() => {
   >
     <StickerParagraph
       :text="text"
-      :color="activeColor"
+      :color="baseColor"
+      :inverted="isInverted"
       :stroke_width="stroke_width"
       :font_size="font_size"
     />

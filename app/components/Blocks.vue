@@ -16,7 +16,7 @@
       </template>
 
       <template v-else-if="block.type === 'text'">
-        <BlockText :block_data="block"/>
+        <BlockText :block_data="block" :sticker="sticker"/>
       </template>
 
       <template v-else-if="block.type === 'video'">
@@ -40,6 +40,10 @@
         <BlockProfiles :block_data="block"/>
       </template>
 
+      <template v-else-if="block.type === 'bullet_points'">
+        <BlockBulletPoint :block_data="block"/>
+      </template>
+
     </template>
   </div>
 </template>
@@ -51,6 +55,7 @@
 
 	defineProps<{
 		content: CMS_BlockData[]
+		sticker?: boolean
 	}>();
 
 </script>

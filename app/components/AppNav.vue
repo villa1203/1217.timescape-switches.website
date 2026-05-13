@@ -4,16 +4,6 @@
       <div class="app-grid app-grid--justify-between">
         <div class="nav-left">
           <StickerButton :text="shabbatText" to="/" :font_size="24" />
-
-          <!-- Location dropdown -->
-          <select v-model="selectedLocation" @change="onLocationChange" class="location-dropdown">
-            <option value="auto">Auto-detect</option>
-            <option value="jerusalem">Jerusalem</option>
-            <option value="newyork">New York</option>
-            <option value="london">London</option>
-            <option value="paris">Paris</option>
-            <option value="losangeles">Los Angeles</option>
-          </select>
         </div>
 
         <div>
@@ -23,12 +13,13 @@
                 text="Research"
                 @click="openResearch"
                 :font_size="24"
-                :color="isOpen ? 'var(--app-color-secondary)' : 'var(--app-color-primary)'"
+                color="var(--app-color-primary)"
+                :active="researchActive"
               />
             </div>
 
             <div>
-              <StickerButton text="Info" to="/info" :font_size="24" />
+              <StickerButton text="Info" to="/info" :font_size="24" :active="isInfoPage" />
             </div>
           </div>
         </div>
@@ -48,30 +39,10 @@ import { useResearchOverlay } from '~/composables/useResearchOverlay'
 
 const { text: shabbatText } = useShabbatCountdown()
 const { toggle: openResearch, isOpen } = useResearchOverlay()
-const selectedLocation = ref('auto')
+const route = useRoute()
+const researchActive = computed(() => isOpen.value || route.path.startsWith('/research'))
+const isInfoPage = computed(() => route.path.startsWith('/info'))
 let userLocation: { latitude: number; longitude: number; city?: string } | null = null
-
-// Location presets
-const locationPresets: Record<string, { latitude: number; longitude: number; city: string }> = {
-  jerusalem: { latitude: 31.7683, longitude: 35.2137, city: 'Jerusalem' },
-  newyork: { latitude: 40.7128, longitude: -74.0060, city: 'New York' },
-  london: { latitude: 51.5074, longitude: -0.1278, city: 'London' },
-  paris: { latitude: 48.8566, longitude: 2.3522, city: 'Paris' },
-  losangeles: { latitude: 34.0522, longitude: -118.2437, city: 'Los Angeles' }
-}
-
-// Handle location change from dropdown
-async function onLocationChange() {
-  if (selectedLocation.value === 'auto') {
-    await getUserLocation()
-  } else {
-    const preset = locationPresets[selectedLocation.value]
-    if (preset) {
-      userLocation = preset
-    }
-  }
-  await updateShabbatCountdown()
-}
 
 // Fetch Shabbat countdown on mount
 onMounted(async () => {
@@ -216,9 +187,9 @@ async function updateShabbatCountdown() {
         const minuteText = minutes === 1 ? 'minute' : 'minutes'
 
         if (hours > 0) {
-          shabbatText.value = `You entered a Timescape, it will end in ${hours} ${hourText}, ${minutes} ${minuteText}`
+          shabbatText.value = `You entered a Timescape,\nit will end in ${hours} ${hourText}, ${minutes} ${minuteText}`
         } else {
-          shabbatText.value = `You entered a Timescape, it will end in ${minutes} ${minuteText}`
+          shabbatText.value = `You entered a Timescape,\nit will end in ${minutes} ${minuteText}`
         }
         return
       }
@@ -239,11 +210,11 @@ async function updateShabbatCountdown() {
     const minuteText = minutes === 1 ? 'minute' : 'minutes'
 
     if (days > 0) {
-      shabbatText.value = `Weekly Timescape in ${days} ${dayText}, ${hours} ${hourText}, ${minutes} ${minuteText}`
+      shabbatText.value = `Weekly Timescape\nin ${days} ${dayText}, ${hours} ${hourText}, ${minutes} ${minuteText}`
     } else if (hours > 0) {
-      shabbatText.value = `Weekly Timescape in ${hours} ${hourText}, ${minutes} ${minuteText}`
+      shabbatText.value = `Weekly Timescape\nin ${hours} ${hourText}, ${minutes} ${minuteText}`
     } else {
-      shabbatText.value = `Weekly Timescape in ${minutes} ${minuteText}`
+      shabbatText.value = `Weekly Timescape\nin ${minutes} ${minuteText}`
     }
   } catch (err) {
     // Silent fail - keep default text
@@ -265,27 +236,6 @@ async function updateShabbatCountdown() {
   display: flex;
   align-items: center;
   gap: 1rem;
-}
-
-.location-dropdown {
-  padding: 0.5rem 1rem;
-  border: 2px solid var(--app-color-primary);
-  border-radius: 2rem;
-  background: white;
-  font-family: inherit;
-  font-size: 14px;
-  cursor: pointer;
-  outline: none;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: var(--app-color-secondary);
-    transform: translateY(-2px);
-  }
-
-  &:focus {
-    border-color: var(--app-color-secondary);
-  }
 }
 
 .v-nav__infos {

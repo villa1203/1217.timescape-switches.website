@@ -3,8 +3,8 @@
 
     <div class="app-grid">
 
-      <div class="app-grid__col-5 app-rm-child-margin">
-        <h2>{{block_data.content.title}}</h2>
+      <div v-if="block_data.content.title" class="app-grid__col-5 app-rm-child-margin">
+        <h2><StickerParagraph :text="block_data.content.title" /></h2>
       </div>
 
       <div class="app-grid__col-7">

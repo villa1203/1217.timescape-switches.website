@@ -4,29 +4,10 @@
 
     <AppLayoutColumns>
       <template v-slot:first>
-
-      </template>
-      <template v-slot:second>
-        <h2>Origin</h2>
-        <div>?</div>
-        <h2>Objects</h2>
-        <div>
-          <div v-for="object of data?.result.objects">
-            <StickerButton
-                           :text="object.title"
-                           :font_size="40"
-                           :to="`/objects/${object.slug}`"
-            />
-          </div>
-        </div>
-      </template>
-    </AppLayoutColumns>
-
-    <AppLayoutColumns>
-      <template v-slot:first>
         <Blocks
           v-if="data?.result.research.content_secondary"
           :content="data?.result.research.content_secondary"
+          :sticker="true"
         />
       </template>
       <template v-slot:second>
@@ -52,11 +33,7 @@ type FetchData = CMS_API_Response & {
       slug: string
       content: CMS_BlockData[]
       content_secondary: CMS_BlockData[]
-    },
-    objects: {
-      title: string
-      slug: string
-    }[]
+    }
   }
 }
 
@@ -79,13 +56,6 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
           },
         }
       },
-      objects: {
-        query: `page('objects').children`,
-        select: {
-          title: true,
-          slug: true,
-        },
-      }
     }
   }
 })

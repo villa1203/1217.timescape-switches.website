@@ -1,5 +1,5 @@
 <template>
-    <footer class="v-app-footer app-with-padding--top-bottom"
+    <footer class="v-app-footer app-with-padding--top-bottom app-with-padding--left-right"
     >
       <div class="v-app-footer__container app-grid app-grid--justify-between app-grid--direction-column">
         <StickerParagraph

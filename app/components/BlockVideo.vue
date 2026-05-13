@@ -8,7 +8,7 @@
            }"
   >
 		<header v-if="block_data.content.title">
-			<h2>{{ block_data.content.title }}</h2>
+			<h2><StickerParagraph :text="block_data.content.title" /></h2>
 		</header>
 
 

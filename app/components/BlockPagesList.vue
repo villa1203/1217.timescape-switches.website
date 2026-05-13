@@ -1,6 +1,6 @@
 <template>
   <div class="v-block block-pages-list app-with-padding--left-right">
-    <h2>{{block_data.content.title}}</h2>
+    <h2 v-if="block_data.content.title"><StickerParagraph :text="block_data.content.title" /></h2>
 
     <AppProjectsPreview
       v-if="block_data.content.pages_liste"

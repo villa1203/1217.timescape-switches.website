@@ -11,7 +11,7 @@ onMounted(async () => {
   const sketch = (p: p5Type) => {
     const lCount = 40
     const rCount = 40
-    const sw = 1
+    const sw = 0.5
     const fxMin = 0.1
     const fxMax = 1
     const fyMin = 0.3
@@ -30,6 +30,7 @@ onMounted(async () => {
       p.pixelDensity(p.displayDensity())
       p.colorMode(p.HSB, 360, 100, 100, 1)
       p.noFill()
+      p.stroke(24, 100, 100, 0.5) // #FF6600 in HSB, 50% alpha — matches --app-color-secondary
       p.strokeWeight(sw)
       p.strokeCap(p.SQUARE)
       values()

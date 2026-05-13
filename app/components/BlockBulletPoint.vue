@@ -1,60 +1,76 @@
 <template>
-	<section class="v-block block-bullet-point app-grid app-grid--align-start" >
+	<section class="v-block block-bullet-point" >
 
-    <div class="app-grid app-grid--align-start app-grid--justify-center">
-      <header class="app-grid__col-4">
-        <div class="app-grid app-grid--align-start app-grid--justify-center app-rm-child-margin">
-          <h2>Research</h2>
-        </div>
-      </header>
+    <header v-if="block_data.content.title" class="block-bullet-point__header">
+      <h2><StickerParagraph :text="block_data.content.title" /></h2>
+    </header>
 
-      <div class="app-grid__col-7">
-        <div class="app-grid app-grid--align-start">
-          <div class="block-bullet-point__coll">
-            <div>
-              <div class="block-bullet-point__coll__title">Workshop</div>
-              <div>Workshops are a key part of the studio’s practice, creating spaces for experimentation and collective exploration. They allow ideas to be tested through discussion, prototyping, and collaboration with students, professionals, and institutions. These moments of exchange often become a starting point for new research directions and future projects.</div>
-            </div>
-            <div>
-              <div class="block-bullet-point__coll__title">Publication</div>
-              <div>Publications document and share the studio’s research. Through essays, research papers, and visual materials, they allow ideas to circulate beyond the studio and contribute to broader discussions in design. Writing and publishing also provide a way to reflect critically on design practices.</div>
-            </div>
-          </div>
-          <div class="block-bullet-point__coll">
-            <div>
-              <div class="block-bullet-point__coll__title">Venture Design</div>
-              <div>Venture design allows the studio to develop projects that move from research to real-world applications. It explores how design ideas can evolve into tools, systems, or initiatives with practical impact. This approach allows design to move beyond speculation and engage directly with implementation and long-term development.</div>
-            </div>
-            <div>
-              <div class="block-bullet-point__coll__title">Speculative Design</div>
-              <div>Speculative design enables the studio to explore alternative futures and question existing systems. Through conceptual projects and prototypes, it opens space for reflection on how design can shape emerging technological and social conditions.</div>
-            </div>
-          </div>
+    <div class="block-bullet-point__items">
+      <div
+        v-for="(item, i) of block_data.content.bullet_points_list"
+        :key="i"
+        class="block-bullet-point__item"
+      >
+        <div class="block-bullet-point__item__title">
+          <h3 v-if="item.title"><StickerParagraph :text="item.title" size="sm" /></h3>
         </div>
+        <div v-if="item.text" class="body-1 block-bullet-point__item__text" v-html="item.text" />
       </div>
     </div>
 
 	</section>
 </template>
 
+<script setup lang="ts">
+import type { CMS_BlockBulletPointsData } from "#shared/cms_api"
+
+defineProps<{
+  block_data: CMS_BlockBulletPointsData
+}>()
+</script>
+
 <style scoped lang="scss">
 .block-bullet-point {
   box-sizing: border-box;
   width: 100%;
-  min-height: calc(100vh - 20rem);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.block-bullet-point__coll {
   display: flex;
   flex-direction: column;
-  gap: 4rem;
+  align-items: flex-start;
 }
 
-.block-bullet-point__coll__title {
-  font-weight: bold;
-  padding-bottom: 1rem;
+.block-bullet-point__header {
+  width: 100%;
+  margin-bottom: 2rem;
+}
+
+.block-bullet-point__items {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--app-grid-gap, 2rem);
+  row-gap: 4rem;
+}
+
+.block-bullet-point__item {
+  display: flex;
+  flex-direction: column;
+}
+
+.block-bullet-point__item__title {
+  min-height: 2.5rem;
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.block-bullet-point__item__text :deep(ul) {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.block-bullet-point__item__text :deep(p) {
+  margin: 0;
 }
 </style>

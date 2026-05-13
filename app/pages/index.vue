@@ -128,14 +128,14 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
 
 .hero-circles {
   position: absolute;
-  width: 90%; 
+  width: 85%;
   height: auto;
   z-index: 0;
 }
 
 .hero-svg {
   position: relative;
-  width: 80%;
+  width: 75%;
   height: auto;
   z-index: 1;
 }
