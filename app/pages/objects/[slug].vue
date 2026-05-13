@@ -168,7 +168,8 @@ const nextObject = computed(() => objectsOrder[(currentIndex.value + 1) % object
   height: 100%;
   overflow-y: auto;
   box-sizing: border-box;
-  padding: 6rem 0;
+  // Same horizontal padding as header/footer (.app-with-padding--left-right = 1rem each side)
+  padding: 6rem var(--app-grid-gap);
   scrollbar-width: thin;
   scrollbar-color: var(--app-color-primary) transparent;
 

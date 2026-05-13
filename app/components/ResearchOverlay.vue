@@ -13,7 +13,7 @@
               v-if="mountedIds[obj.id]"
               :class="['preview-mount', { 'is-active': activeObject?.id === obj.id }]"
             >
-              <component :is="obj.component" mode="plain" />
+              <component :is="obj.component" mode="plain" :paused="activeObject?.id !== obj.id" />
             </div>
           </template>
         </div>
@@ -36,13 +36,12 @@
 
             <span class="list-label">Objects</span>
 
-            <ul class="objects-list">
+            <ul class="objects-list" @mouseleave="activeObject = null">
               <li
                 v-for="obj in objects"
                 :key="obj.id"
                 class="objects-list__item"
                 @mouseenter="onObjectEnter(obj)"
-                @mouseleave="activeObject = null"
               >
                 <NuxtLink :to="`/objects/${obj.slug}`" @click="close" class="overlay-nav-link">
                   <StickerParagraph
@@ -129,12 +128,16 @@ onUnmounted(() => {
   z-index: 200;
   background: #ffffff;
   opacity: 0;
+  visibility: hidden; // cascades to descendants — they aren't click/scroll targets when closed
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  // delay visibility change until after the fade-out completes
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
 
   &.is-open {
     opacity: 1;
+    visibility: visible;
     pointer-events: all;
+    transition: opacity 0.3s ease, visibility 0s linear 0s;
   }
 }
 
@@ -221,22 +224,37 @@ onUnmounted(() => {
 }
 
 .design-time {
-  margin-bottom: 3rem;
+  margin-bottom: 0;
 }
 
 .objects-list {
   list-style: none;
-  padding: 0;
+  padding: 0 0 48px; // bottom pad so last item's SVG overflow isn't clipped
   margin: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1rem;
+  gap: 0;
 }
 
 .objects-list__item {
   cursor: default;
+  position: relative;
+  // Fixed hit zone height = desired visual pitch (116px SVG − 48px visual collapse).
+  // SVG overflows visually into the next item's space, creating the stacked look,
+  // but the DOM boxes are non-overlapping so mouseenter/leave are unambiguous.
+  height: 68px;
+  overflow: visible;
   transition: transform 0.15s ease;
+
+  // SVG overflow must not intercept events destined for the item below.
+  :deep(svg) { pointer-events: none; }
+
+  // Last item has no neighbour to "cover" its SVG overflow → extend hit-zone
+  // to the full SVG height so hovering the bottom half of the label still fires.
+  &:last-child {
+    height: 116px;
+  }
 
   &:hover {
     transform: translateX(-6px);

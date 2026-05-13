@@ -67,6 +67,9 @@ useRouter().afterEach(() => {
   left: 0;
   width: 100%;
   z-index: 300; // above the Research overlay (z-index: 200)
+  // Footer is purely decorative text — never intercept clicks/scroll on the page below.
+  // Setting on both wrapper and descendants (pointer-events doesn't cascade by default).
+  &, * { pointer-events: none; }
 }
 
 

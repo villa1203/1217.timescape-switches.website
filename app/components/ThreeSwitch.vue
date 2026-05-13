@@ -8,15 +8,23 @@
         <div class="loader-ring" />
       </div>
     </Transition>
+
+    <!-- Dev-only perf HUD -->
+    <div v-if="isDev" class="perf-hud">{{ fps }}fps {{ frameMs }}ms</div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useFrameStats } from '~/composables/useFrameStats'
+
+const isDev = import.meta.env.DEV
+const { fps, frameMs } = isDev ? useFrameStats() : { fps: { value: 0 }, frameMs: { value: 0 } }
 
 /* ─────────────────────────── props ────────────────────────────────── */
 const props = defineProps({
-  mode: { type: String, default: 'normal' }  // 'normal' | 'glass'
+  mode: { type: String, default: 'normal' },  // 'normal' | 'glass'
+  paused: { type: Boolean, default: false }
 })
 
 /* ─────────────────────────── colours ──────────────────────────────── */
@@ -61,6 +69,8 @@ let fluidCanvas, fluidCtx, fluidTexture
 const fluidTrail = []
 const maxTrailLength = 12
 let animTime = 0
+let renderRequested = false
+let fluidDecayFrames = 0
 
 /* ─────────────────────────── material storage ─────────────────────── */
 let normalMaterials = new Map()
@@ -177,10 +187,10 @@ async function init() {
   renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
-    alpha: false,
+    alpha: true,
     powerPreference: 'high-performance'
   })
-  renderer.setPixelRatio(window.devicePixelRatio)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(W, H, false)
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
@@ -189,44 +199,46 @@ async function init() {
   renderer.toneMappingExposure = 1.3
 
   /* Render targets for dual-scene compositing */
-  const targetW = W * window.devicePixelRatio
-  const targetH = H * window.devicePixelRatio
+  const targetW = W * Math.min(window.devicePixelRatio, 2)
+  const targetH = H * Math.min(window.devicePixelRatio, 2)
 
   renderTarget1 = new THREE.WebGLRenderTarget(targetW, targetH, {
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
     format: THREE.RGBAFormat,
-    samples: 8
+    samples: 4
   })
 
   renderTarget2 = new THREE.WebGLRenderTarget(targetW, targetH, {
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
     format: THREE.RGBAFormat,
-    samples: 8
+    samples: 4
   })
 
   /* Normal Scene */
   normalScene = new THREE.Scene()
-  normalScene.background = new THREE.Color(0xffffff)
+  normalScene.background = null
 
   /* X-ray Scene */
   xrayScene = new THREE.Scene()
-  xrayScene.background = new THREE.Color(0xffffff)
+  xrayScene.background = null
 
   /* Lighting */
-  function addLights(targetScene, intensity = 1.0) {
+  function addLights(targetScene, intensity = 1.0, enableShadows = true) {
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.0 * intensity)
     targetScene.add(ambientLight)
 
     const keyLight = new THREE.DirectionalLight(0xffffff, 2.5 * intensity)
     keyLight.position.set(5, 8, 10)
-    keyLight.castShadow = true
-    keyLight.shadow.mapSize.width = 4096
-    keyLight.shadow.mapSize.height = 4096
-    keyLight.shadow.camera.near = 0.5
-    keyLight.shadow.camera.far = 50
-    keyLight.shadow.bias = -0.00001
+    keyLight.castShadow = enableShadows
+    if (enableShadows) {
+      keyLight.shadow.mapSize.width = 1024
+      keyLight.shadow.mapSize.height = 1024
+      keyLight.shadow.camera.near = 0.5
+      keyLight.shadow.camera.far = 50
+      keyLight.shadow.bias = -0.00001
+    }
     targetScene.add(keyLight)
 
     const fillLight = new THREE.DirectionalLight(0xffffff, 1.5 * intensity)
@@ -243,7 +255,7 @@ async function init() {
   }
 
   addLights(normalScene, 1.0)
-  addLights(xrayScene, 1.0)
+  addLights(xrayScene,   1.0, false)
 
   /* Load GLB model */
   const loader = new GLTFLoader()
@@ -388,14 +400,14 @@ async function init() {
       modelSize = Math.max(size.x, size.y, size.z)
       spherical.radius = modelSize * CAMERA_DISTANCE
       minZoom = modelSize * 1.2
-      maxZoom = modelSize * 4
+      maxZoom = modelSize * CAMERA_DISTANCE
       updateCameraPosition()
 
       normalScene.add(model)
       xrayScene.add(xrayModel)
       loading.value = false
       initFluidSimulation()
-      animate()
+      requestRender()
     },
     undefined,
     (error) => {
@@ -488,8 +500,15 @@ function updateFluidSimulation() {
 }
 
 /* ─────────────────────────── animate ──────────────────────────────── */
-function animate() {
+function requestRender() {
+  if (props.paused || renderRequested) return
+  renderRequested = true
   animId = requestAnimationFrame(animate)
+}
+
+function animate() {
+  renderRequested = false
+  if (fluidDecayFrames > 0) fluidDecayFrames--
 
   if (autoRotate) {
     spherical.theta += 0.002
@@ -546,6 +565,12 @@ function animate() {
     renderer.setRenderTarget(null)
     renderer.render(normalScene, camera)
   }
+
+  const needsLoop = autoRotate
+    || Math.abs(rotVel.x) > 0.001
+    || Math.abs(rotVel.y) > 0.001
+    || fluidDecayFrames > 0
+  if (needsLoop) requestRender()
 }
 
 /* ─────────────────────────── resize ───────────────────────────────── */
@@ -558,8 +583,8 @@ function onResize() {
   camera.updateProjectionMatrix()
   renderer.setSize(W, H, false)
 
-  const targetW = W * window.devicePixelRatio
-  const targetH = H * window.devicePixelRatio
+  const targetW = W * Math.min(window.devicePixelRatio, 2)
+  const targetH = H * Math.min(window.devicePixelRatio, 2)
 
   if (renderTarget1) {
     renderTarget1.setSize(targetW, targetH)
@@ -582,6 +607,7 @@ function onResize() {
     }
     if (fluidTexture) fluidTexture.needsUpdate = true
   }
+  requestRender()
 }
 
 /* ─────────────────────────── mouse / touch ────────────────────────── */
@@ -593,6 +619,8 @@ function onMouseDown(e) {
 }
 
 function onMouseMove(e) {
+  fluidDecayFrames = 40
+  requestRender()
   if (isDragging) {
     const dx = e.clientX - lastMouse.x
     const dy = e.clientY - lastMouse.y
@@ -611,7 +639,7 @@ function onMouseMove(e) {
 
 function onMouseUp() {
   isDragging = false
-  autoRotateTimer = setTimeout(() => { autoRotate = true }, 2500)
+  autoRotateTimer = setTimeout(() => { autoRotate = true; requestRender() }, 2500)
 }
 
 function onWheel(e) {
@@ -619,6 +647,7 @@ function onWheel(e) {
   spherical.radius += e.deltaY * 0.001 * modelSize
   spherical.radius = Math.max(minZoom, Math.min(maxZoom, spherical.radius))
   updateCameraPosition()
+  requestRender()
 }
 
 let touchStart = null
@@ -638,6 +667,18 @@ watch(() => props.mode, (newMode) => {
   if (!model) return
   if (newMode === 'normal') switchToNormalMode()
   else if (newMode === 'glass') switchToGlassMode()
+})
+
+watch(() => props.paused, (isPaused) => {
+  if (isPaused) {
+    cancelAnimationFrame(animId)
+    animId = 0
+    renderRequested = false
+    fluidDecayFrames = 0
+    fluidTrail.length = 0
+  } else if (renderer) {
+    requestRender()
+  }
 })
 
 /* ─────────────────────────── lifecycle ────────────────────────────── */
@@ -673,7 +714,7 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   height: 100vh;
-  background: #ffffff;
+  background: transparent;
   overflow: hidden;
 }
 
@@ -689,7 +730,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  background: transparent;
   z-index: 10;
 }
 
@@ -708,4 +749,18 @@ onUnmounted(() => {
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.perf-hud {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font: 11px/1 monospace;
+  color: #00ff88;
+  background: rgba(0,0,0,0.55);
+  padding: 3px 6px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 100;
+  user-select: none;
+}
 </style>

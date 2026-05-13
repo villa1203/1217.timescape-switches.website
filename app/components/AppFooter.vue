@@ -27,7 +27,6 @@ const FOOTER_TEXT_MAX_WIDTH = 630  // px — column width for "Design Research O
 
 <style lang="scss" scoped >
 .v-app-footer {
-  margin-top: 10rem;
   width: 100%;
 }
 </style>
