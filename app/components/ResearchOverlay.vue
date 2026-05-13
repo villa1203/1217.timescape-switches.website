@@ -97,6 +97,13 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') close()
 }
 
+// Close the overlay on any navigation (clicking Info, the shabbat → home link,
+// Design & Time, an object name, etc. — anything that changes the route).
+const route = useRoute()
+watch(() => route.fullPath, () => {
+  if (isOpen.value) close()
+})
+
 watch(isOpen, (val) => {
   if (val) {
     document.addEventListener('keydown', onKeydown)
@@ -172,6 +179,15 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   height: 100vh;
+
+  // Mobile: stack — 3D preview on top, list below; allow page scroll inside the overlay
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: 50vh auto;
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
 }
 
 /* ── left: 3D preview ── */
@@ -202,12 +218,22 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  // Push the centered list block down a bit — reduces the available space
+  // at the top of the flex container.
+  padding-top: 6rem;
 }
 
 .list-content {
   display: flex;
   flex-direction: column;
   gap: 0;
+
+  // Sticker texts in this panel ("Design & Time", object names) follow the h1 typo
+  // (Happy Times NG, regular weight) instead of StickerParagraph's default (Sligoil, 800).
+  :deep(.sp-t) {
+    font-family: 'Happy Times NG', Georgia, serif;
+    font-weight: 400;
+  }
 }
 
 .list-label {
@@ -224,7 +250,8 @@ onUnmounted(() => {
 }
 
 .design-time {
-  margin-bottom: 0;
+  // Gap between the "Origin / Design & Time" block and the "Objects" section below
+  margin-bottom: 3rem;
 }
 
 .objects-list {

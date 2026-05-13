@@ -145,9 +145,5 @@ export const KQL_PROJECTS_SELECT = {
     select: KQL_SELECT_IMAGE,
   },
   strategies: true,
-  production: true,
-  pre_commitment: true,
-  delegated_agency: true,
-  action_and_effect: true,
   baseline: true,
 }

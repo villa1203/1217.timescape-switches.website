@@ -230,6 +230,19 @@ async function updateShabbatCountdown() {
 .v-nav {
   width: 100%;
   position: relative;
+  // Prevent SVG stickers from horizontally overflowing the viewport
+  overflow-x: hidden;
+  // Sticker text inherits font-weight from its container — bold for nav
+  font-weight: 700;
+
+  // Mobile: stack the rows — shabbat countdown on top, Research + Info below
+  @media (max-width: 768px) {
+    :deep(.app-grid--justify-between) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+  }
 }
 
 .nav-left {

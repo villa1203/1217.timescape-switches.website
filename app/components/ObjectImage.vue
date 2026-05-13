@@ -39,6 +39,5 @@ defineProps<{
 
 .object-image__caption {
   margin-top: 0.75rem;
-  font-size: 0.95rem;
 }
 </style>

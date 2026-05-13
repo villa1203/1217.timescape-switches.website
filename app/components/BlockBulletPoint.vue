@@ -48,7 +48,7 @@ defineProps<{
   display: grid;
   grid-template-columns: 1fr 1fr;
   column-gap: var(--app-grid-gap, 2rem);
-  row-gap: 4rem;
+  row-gap: 1.5rem;
 }
 
 .block-bullet-point__item {

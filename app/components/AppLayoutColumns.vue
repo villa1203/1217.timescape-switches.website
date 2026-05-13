@@ -24,10 +24,22 @@ defineProps<{
 .v-app-layout-columns {
   height: calc(100vh - var(--app-header-height, 0px) - var(--app-footer-height, 0px));
   box-sizing: border-box;
+
+  // Mobile: drop the viewport-height constraint so stacked columns flow
+  @media (max-width: 768px) {
+    height: auto;
+  }
 }
 
 .v-app-layout-columns__grid {
   height: 100%;
+
+  // Mobile: stack the columns vertically (override .app-grid's flex-wrap: nowrap)
+  @media (max-width: 768px) {
+    flex-direction: column;
+    flex-wrap: wrap;
+    height: auto;
+  }
 }
 
 .v-app-layout-columns__col {
@@ -63,5 +75,17 @@ defineProps<{
                        black $fade,
                        black calc(100% - #{$fade}),
                        transparent 100%);
+
+  // Mobile: full width, body scroll, no inner scroll/mask
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    overflow-y: visible;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    -webkit-mask-image: none;
+            mask-image: none;
+  }
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, useId } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, useId } from 'vue'
 
 const props = defineProps<{
   text:          string
@@ -105,8 +105,14 @@ function computeLines() {
   svg.appendChild(probe)
   document.body.appendChild(svg)
 
-  // Available pixel width for text (subtract stroke padding on both sides)
-  const availW = (props.max_width ?? 600) - sw.value * 2 - PAD.value
+  // Available pixel width for text. Cap to viewport width so stickers never
+  // push outside the screen on mobile — they re-wrap onto more lines instead.
+  const VIEWPORT_PAD = 32 // total horizontal margin we want to keep clear of stickers
+  const cappedMax = Math.min(
+    props.max_width ?? 600,
+    window.innerWidth - VIEWPORT_PAD,
+  )
+  const availW = cappedMax - sw.value * 2 - PAD.value
 
   // Honor literal "\n" in the input as a hard line break. Split on newlines
   // first, then word-wrap within each segment.
@@ -153,7 +159,14 @@ function computeLines() {
   svgWidth.value = Math.ceil(maxW + PAD.value * 2)
 }
 
-onMounted(computeLines)
+onMounted(() => {
+  computeLines()
+  // Re-wrap when the viewport size changes so the cap above stays accurate
+  if (import.meta.client) window.addEventListener('resize', computeLines)
+})
+onUnmounted(() => {
+  if (import.meta.client) window.removeEventListener('resize', computeLines)
+})
 watch(() => [props.text, props.font_size, props.max_width, props.stroke_width, props.size], computeLines)
 
 // ── Glow-layer helper ────────────────────────────────────────────────────────
@@ -231,7 +244,7 @@ const DY = (i: number) => i === 0 ? '0' : `${lh.value}em`
 .sp-t {
   font-family:    inherit;
   font-style:     inherit;
-  font-weight:    800;
+  font-weight:    inherit;
   stroke-linejoin: round;
   paint-order:    stroke;
 }

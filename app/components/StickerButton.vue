@@ -81,5 +81,8 @@ const isInverted = computed(() => isHovered.value || !!props.active)
   cursor: pointer;
   text-decoration: none;
   transition: transform 0.2s ease;
+  /* <button> elements don't inherit font properties by default — opt back in
+     so the nested StickerParagraph picks up the surrounding font-weight/family. */
+  font: inherit;
 }
 </style>

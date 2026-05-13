@@ -28,5 +28,9 @@ const FOOTER_TEXT_MAX_WIDTH = 630  // px — column width for "Design Research O
 <style lang="scss" scoped >
 .v-app-footer {
   width: 100%;
+  // Sticker text inherits font-weight from its container — bold for footer
+  font-weight: 700;
+  // Same overflow protection as the nav — sticker SVGs never push outside the screen
+  overflow-x: hidden;
 }
 </style>

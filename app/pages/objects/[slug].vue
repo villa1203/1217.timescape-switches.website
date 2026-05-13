@@ -15,29 +15,17 @@
 
       <!-- Right: text content with independent scroll + edge fade -->
       <div class="v-slug__right">
-        <h1 class="v-slug__title">{{ data?.result.title }}</h1>
+        <h1 v-if="data?.result.title" class="v-slug__title">
+          <StickerParagraph :text="data.result.title" :font_size="48" :line_height="1.0" />
+        </h1>
         <p v-if="data?.result.baseline" class="v-slug__baseline">{{ data.result.baseline }}</p>
 
         <div class="v-slug__meta">
           <div>
-            <dt>Strategies</dt>
-            <dd>{{ data?.result.strategies }}</dd>
-          </div>
-          <div>
-            <dt>Production</dt>
-            <dd>{{ data?.result.production }}</dd>
-          </div>
-          <div>
-            <dt>Pre-commitment</dt>
-            <dd>{{ data?.result.pre_commitment }}</dd>
-          </div>
-          <div>
-            <dt>Delegated agency</dt>
-            <dd>{{ data?.result.delegated_agency }}</dd>
-          </div>
-          <div>
-            <dt>Action & effect</dt>
-            <dd>{{ data?.result.action_and_effect }}</dd>
+            <h3 class="v-slug__meta__title">
+              <StickerParagraph text="Temporal Strategies" size="sm" />
+            </h3>
+            <div class="v-slug__meta__value" v-html="data?.result.strategies" />
           </div>
         </div>
 
@@ -76,10 +64,6 @@ type FetchData = CMS_API_Response & {
     slug: string,
     content: CMS_BlockData[],
     strategies: string
-    production: string
-    pre_commitment: string
-    delegated_agency: string
-    action_and_effect: string
     baseline: string
     cover_front: CMS_API_ImageInstance[]
     cover_back: CMS_API_ImageInstance[]
@@ -135,6 +119,11 @@ const nextObject = computed(() => objectsOrder[(currentIndex.value + 1) % object
 .v-slug__layout {
   position: relative;
   height: calc(100vh - var(--app-header-height, 0px) - var(--app-footer-height, 0px));
+
+  // Mobile: drop the fixed-height constraint so the columns can stack and grow
+  @media (max-width: 768px) {
+    height: auto;
+  }
 }
 
 /* Left: 3D — full viewport height, fixed to the left half so it lives
@@ -148,6 +137,13 @@ const nextObject = computed(() => objectsOrder[(currentIndex.value + 1) % object
   height: 100vh;
   overflow: hidden;
   z-index: 0;
+
+  // Mobile: full-width block on top, in normal flow (not fixed)
+  @media (max-width: 768px) {
+    position: relative;
+    width: 100%;
+    height: 60vh;
+  }
 }
 
 /* Same shape as the old info.vue viewer-section */
@@ -172,6 +168,14 @@ const nextObject = computed(() => objectsOrder[(currentIndex.value + 1) % object
   padding: 6rem var(--app-grid-gap);
   scrollbar-width: thin;
   scrollbar-color: var(--app-color-primary) transparent;
+
+  // Mobile: full-width below the 3D viewer, no inner scroll (use body scroll instead)
+  @media (max-width: 768px) {
+    margin-left: 0;
+    height: auto;
+    overflow-y: visible;
+    padding: 2rem var(--app-grid-gap);
+  }
 
   $fade: 4rem;
   -webkit-mask-image: linear-gradient(to bottom,
@@ -206,6 +210,30 @@ const nextObject = computed(() => objectsOrder[(currentIndex.value + 1) % object
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+/* Same style as BlockBulletPoint titles: h3 (sticker, sm) with no extra margin */
+.v-slug__meta__title {
+  margin: 0;
+  min-height: 2.5rem;
+}
+
+/* Strip the default ul/li indent that ships in the CMS-authored HTML.
+   Force Happy Times NG so li/ul match the paragraph typography. */
+.v-slug__meta__value {
+  font-family: 'Happy Times NG', Georgia, serif;
+  font-size: 1.2rem;
+  line-height: 120%;
+
+  :deep(ul) {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+  }
+  :deep(p) {
+    margin: 0;
+  }
 }
 
 .v-slug__nav {
