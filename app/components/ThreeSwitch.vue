@@ -11,12 +11,27 @@
 
     <!-- Dev-only perf HUD -->
     <div v-if="isDev" class="perf-hud">{{ fps }}fps {{ frameMs }}ms</div>
+
+    <div class="float-panel">
+      <span class="float-label">Angle: {{ floatAngleDeg }}°</span>
+      <input type="range" class="float-slider" min="0" max="360" step="1" v-model.number="floatAngleDeg" />
+      <div class="float-actions">
+        <button class="float-btn" @click="floatAngleDeg = 0" :disabled="isFloatExporting || isExportingSingle">↺</button>
+        <button class="float-btn export" @click="startSingleExport()" :disabled="isFloatExporting || isExportingSingle || loading">
+          {{ isExportingSingle ? '…' : '📷' }}
+        </button>
+        <button class="float-btn export" @click="startFloatExport()" :disabled="isFloatExporting || isExportingSingle || loading">
+          {{ isFloatExporting ? floatExportLabel : '⏬ Export' }}
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useFrameStats } from '~/composables/useFrameStats'
+import { useFloatSequence } from '~/composables/useFloatSequence'
 
 const isDev = import.meta.env.DEV
 const { fps, frameMs } = isDev ? useFrameStats() : { fps: { value: 0 }, frameMs: { value: 0 } }
@@ -49,17 +64,19 @@ let whiteParts         = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]  // white plastic 
 
 /* ─────────────────────────── camera ───────────────────────────────── */
 const CAMERA_DISTANCE = 2  // × modelSize — decrease to start closer, increase to zoom out
+const FLOAT_AMPLITUDE = 0.05  // world-unit vertical travel — tune freely
+const FLOAT_PERIOD    = 1.5   // seconds per half-cycle
 
 /* ─────────────────────────── refs & state ─────────────────────────── */
 const canvasRef = ref(null)
 const loading = ref(true)
 
 /* ─────────────────────────── three.js state ───────────────────────── */
-let THREE, GLTFLoader, camera, renderer, model, animId, canvas
+let THREE, GLTFLoader, camera, renderer, model, xrayModel, modelPivot, xrayModelPivot, animId, canvas
 let renderTarget1, renderTarget2
 let normalScene, xrayScene, compositingMesh, orthoCamera, orthoScene
 let isDragging = false, lastMouse = { x: 0, y: 0 }
-let rotVel = { x: 0, y: 0 }, autoRotate = true, autoRotateTimer = null
+let rotVel = { x: 0, y: 0 }, autoRotate = false, floatMode = true, autoRotateTimer = null
 let spherical = { theta: 0, phi: Math.PI / 2, radius: 5 }
 let modelSize = 1, minZoom = 0.5, maxZoom = 2
 let mousePos = { x: 0.5, y: 0.5 }
@@ -72,7 +89,7 @@ let animTime = 0
 let renderRequested = false
 let fluidDecayFrames = 0
 
-/* ─────────────────────────── material storage ─────────────────────── */
+/* ────────────────11111─────────── material storage ─────────────────────── */
 let normalMaterials = new Map()
 let xrayMaterials = new Map()
 let glassMaterials = new Map()
@@ -188,7 +205,8 @@ async function init() {
     canvas,
     antialias: true,
     alpha: true,
-    powerPreference: 'high-performance'
+    powerPreference: 'high-performance',
+    preserveDrawingBuffer: true
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(W, H, false)
@@ -364,7 +382,7 @@ async function init() {
       })
 
       /* X-ray scene — clone and apply transparent materials */
-      const xrayModel = model.clone()
+      xrayModel = model.clone()
       const xrayMeshes = []
       xrayModel.traverse((c) => { if (c.isMesh) xrayMeshes.push(c) })
 
@@ -390,11 +408,16 @@ async function init() {
         xrayMaterials.set(child, mat)
       })
 
-      /* Center models */
+      /* Center models — use pivot groups so rotation stays on-axis */
       const box = new THREE.Box3().setFromObject(model)
       const center = box.getCenter(new THREE.Vector3())
       model.position.sub(center)
       xrayModel.position.sub(center)
+
+      modelPivot = new THREE.Group()
+      xrayModelPivot = new THREE.Group()
+      modelPivot.add(model)
+      xrayModelPivot.add(xrayModel)
 
       const size = box.getSize(new THREE.Vector3())
       modelSize = Math.max(size.x, size.y, size.z)
@@ -403,8 +426,8 @@ async function init() {
       maxZoom = modelSize * CAMERA_DISTANCE
       updateCameraPosition()
 
-      normalScene.add(model)
-      xrayScene.add(xrayModel)
+      normalScene.add(modelPivot)
+      xrayScene.add(xrayModelPivot)
       loading.value = false
       initFluidSimulation()
       requestRender()
@@ -436,6 +459,13 @@ function updateCameraPosition() {
   camera.position.y = radius * Math.cos(phi)
   camera.position.z = radius * Math.sin(phi) * Math.sin(theta)
   camera.lookAt(0, 0, 0)
+}
+
+function renderFrameForExport() {
+  if (!renderer || !xrayScene || !camera) return
+  renderer.setClearColor(0x000000, 0)
+  renderer.setRenderTarget(null)
+  renderer.render(xrayScene, camera)
 }
 
 /* ─────────────────────────── fluid simulation ─────────────────────── */
@@ -524,6 +554,13 @@ function animate() {
     updateCameraPosition()
   }
 
+  if (floatMode && modelPivot) {
+    const t = performance.now() / 1000
+    const y = FLOAT_AMPLITUDE * Math.sin(t * Math.PI / FLOAT_PERIOD)
+    modelPivot.position.y = y
+    if (xrayModelPivot) xrayModelPivot.position.y = y
+  }
+
   updateFluidSimulation()
 
   if (props.mode === 'normal') {
@@ -566,7 +603,8 @@ function animate() {
     renderer.render(normalScene, camera)
   }
 
-  const needsLoop = autoRotate
+  const needsLoop = floatMode
+    || autoRotate
     || Math.abs(rotVel.x) > 0.001
     || Math.abs(rotVel.y) > 0.001
     || fluidDecayFrames > 0
@@ -614,6 +652,9 @@ function onResize() {
 function onMouseDown(e) {
   isDragging = true
   autoRotate = false
+  floatMode = false
+  if (modelPivot) modelPivot.position.y = 0
+  if (xrayModelPivot) xrayModelPivot.position.y = 0
   clearTimeout(autoRotateTimer)
   lastMouse = { x: e.clientX, y: e.clientY }
 }
@@ -639,7 +680,7 @@ function onMouseMove(e) {
 
 function onMouseUp() {
   isDragging = false
-  autoRotateTimer = setTimeout(() => { autoRotate = true; requestRender() }, 2500)
+  autoRotateTimer = setTimeout(() => { floatMode = true; requestRender() }, 2500)
 }
 
 function onWheel(e) {
@@ -677,6 +718,35 @@ watch(() => props.paused, (isPaused) => {
     fluidDecayFrames = 0
     fluidTrail.length = 0
   } else if (renderer) {
+    requestRender()
+  }
+})
+
+const floatAngleDeg = ref(0)
+const {
+  isExporting: isFloatExporting,
+  exportLabel: floatExportLabel,
+  startFloatExport,
+  isExportingSingle,
+  startSingleExport,
+} = useFloatSequence({
+  getCanvas: () => canvas,
+  getModel: () => modelPivot,
+  getXrayModel: () => xrayModelPivot,
+  getAmplitude: () => FLOAT_AMPLITUDE,
+  getFloatPeriod: () => FLOAT_PERIOD,
+  getFloatMode: () => floatMode,
+  setFloatMode: v => { floatMode = v },
+  getRenderer: () => renderer,
+  getCamera: () => camera,
+  renderFrame: renderFrameForExport,
+  requestRender,
+})
+watch(floatAngleDeg, deg => {
+  if (!isFloatExporting.value) {
+    const angle = (deg * Math.PI) / 180
+    if (modelPivot) modelPivot.rotation.y = angle
+    if (xrayModelPivot) xrayModelPivot.rotation.y = angle
     requestRender()
   }
 })
@@ -763,4 +833,67 @@ onUnmounted(() => {
   z-index: 100;
   user-select: none;
 }
+
+.record-btn {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  font: 11px/1 monospace;
+  color: #fff;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.25);
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 100;
+  transition: background 0.2s;
+}
+.record-btn:hover:not(:disabled) { background: rgba(60,0,100,0.8); }
+.record-btn.recording { border-color: #ff4444; color: #ff8888; cursor: default; }
+.record-btn:disabled { opacity: 0.5; cursor: default; }
+
+.float-panel {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  padding: 8px 10px;
+  z-index: 100;
+  min-width: 160px;
+}
+.float-label {
+  font: 11px/1 monospace;
+  color: #ccc;
+  user-select: none;
+}
+.float-slider {
+  width: 100%;
+  accent-color: #bb55ff;
+  cursor: pointer;
+}
+.float-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+.float-btn {
+  flex: 1;
+  font: 11px/1 monospace;
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.float-btn:hover:not(:disabled) { background: rgba(255,255,255,0.2); }
+.float-btn.export { color: #bb55ff; border-color: rgba(187,85,255,0.4); }
+.float-btn.export:hover:not(:disabled) { background: rgba(187,85,255,0.2); }
+.float-btn:disabled { opacity: 0.4; cursor: default; }
 </style>
