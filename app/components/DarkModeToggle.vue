@@ -17,9 +17,12 @@ const { isOn, toggle } = useTransparentMode()
 </script>
 
 <style scoped lang="scss">
+:root {
+    --pill-ratio:   93 / 46;  // same proportions as the original SVG asset
+}
+
 /* ── tweakables ─────────────────────────────────────────────── */
 $pill-width:   5rem;
-$pill-ratio:   93 / 46;  // same proportions as the original SVG asset
 $border:       2px;
 $color:        #820FC1;
 $bg:           #ffffff;
@@ -41,7 +44,7 @@ $glow-alpha:   0.65;
   z-index: 150;
 
   width: $pill-width;
-  aspect-ratio: #{$pill-ratio};
+  aspect-ratio: var(--pill-ratio);
   border-radius: 9999px;
   border: none;
   background: $bg;
