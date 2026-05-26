@@ -10,21 +10,24 @@
     </Transition>
 
     <!-- Dev-only perf HUD -->
-    <div v-if="isDev" class="perf-hud">{{ fps }}fps {{ frameMs }}ms</div>
+    <!-- <div v-if="isDev" class="perf-hud">{{ fps }}fps {{ frameMs }}ms</div> -->
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { useFrameStats } from '~/composables/useFrameStats'
+// import { useFrameStats } from '~/composables/useFrameStats'
 
-const isDev = import.meta.env.DEV
-const { fps, frameMs } = isDev ? useFrameStats() : { fps: { value: 0 }, frameMs: { value: 0 } }
+// const isDev = import.meta.env.DEV
+// const { fps, frameMs } = isDev ? useFrameStats() : { fps: { value: 0 }, frameMs: { value: 0 } }
 
 /* ─────────────────────────── props ────────────────────────────────── */
 const props = defineProps({
   mode: { type: String, default: 'normal' },  // 'normal' | 'glass'
-  paused: { type: Boolean, default: false }
+  paused: { type: Boolean, default: false },
+  // GLB URL from the CMS (page.model). Falls back to the bundled /public asset
+  // when the CMS has no model uploaded for this object.
+  src: { type: String, default: '' }
 })
 
 /* ─────────────────────────── colours ──────────────────────────────── */
@@ -260,7 +263,7 @@ async function init() {
   /* Load GLB model */
   const loader = new GLTFLoader()
   loader.load(
-    '/interrupteur.glb',
+    props.src || '/interrupteur.glb',
     (gltf) => {
       model = gltf.scene
 
@@ -407,6 +410,8 @@ async function init() {
       xrayScene.add(xrayModel)
       loading.value = false
       initFluidSimulation()
+      // apply the initial mode — the props.mode watcher only fires on change, not on mount
+      if (props.mode === 'glass') switchToGlassMode()
       requestRender()
     },
     undefined,
@@ -651,15 +656,23 @@ function onWheel(e) {
 }
 
 let touchStart = null
+// Centroid of the first two touches — drives the 3D on a two-finger drag.
+function twoFingerCenter(e) {
+  const a = e.touches[0], b = e.touches[1]
+  return { clientX: (a.clientX + b.clientX) / 2, clientY: (a.clientY + b.clientY) / 2 }
+}
 function onTouchStart(e) {
+  // One finger scrolls the page; only a two-finger gesture drives the 3D.
+  if (e.touches.length < 2) return
   e.preventDefault()
-  touchStart = e.touches[0]
-  onMouseDown({ clientX: touchStart.clientX, clientY: touchStart.clientY })
+  touchStart = twoFingerCenter(e)
+  onMouseDown(touchStart)
 }
 
 function onTouchMove(e) {
+  if (e.touches.length < 2) return
   e.preventDefault()
-  onMouseMove({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })
+  onMouseMove(twoFingerCenter(e))
 }
 
 /* ─────────────────────────── mode switching ───────────────────────── */
@@ -722,6 +735,10 @@ onUnmounted(() => {
   display: block;
   width: 100%;
   height: 100%;
+  /* One-finger touch scrolls the page; two-finger gestures rotate the 3D.
+     pan-y lets the browser own vertical scroll and disables pinch-zoom so the
+     two-finger handler reliably receives its events. */
+  touch-action: pan-y;
 }
 
 .scene-loader {

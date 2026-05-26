@@ -21,6 +21,16 @@
   --app-row-gap: 1rem;
 }
 
+// Mobile: nav stacks onto 2 rows and footer text wraps, so the fixed header
+// and footer are visibly taller than 5rem. Bump these so the global
+// padding-top/bottom in .v-app keeps page content fully clear of them.
+@media (max-width: 768px) {
+  :root {
+    --app-header-height: 8rem;
+    --app-footer-height: 6rem;
+  }
+}
+
 html {
   font-family: 'Sligoil', sans-serif;
   font-size: 16px;

@@ -18,6 +18,7 @@
 						:text="p"
 						:font_size="20"
 						:max_width="bodyWidth"
+						:fill_max_width="true"
 						variant="secondary"
 					/>
 				</div>
@@ -91,8 +92,35 @@ const stickerParagraphs = computed(() => {
   gap: 1rem;
 }
 
+/* Spacing is CMS-driven: no imposed margins on the writer content, so the
+   layout reflects exactly the line breaks (<br>) and paragraphs authored in
+   the CMS. Add a blank line in the writer to get vertical space. */
+/* Each paragraph end gets a gap below it, matching the paragraph spacing in
+   the CMS writer. Empty paragraphs (blank lines) also get a line box so an
+   extra blank line in the writer shows as extra space on the front. */
 .block-text__body :deep(p) {
   text-indent: 2rem;
+  margin: 0 0 1rem;
+}
+
+.block-text__body :deep(p:empty)::before {
+  content: "\00a0";
+}
+
+.block-text__body :deep(ul),
+.block-text__body :deep(ol) {
+  margin: 0 0 1rem;
+  padding-left: 1.5rem;
+}
+
+/* Bullet lines stay tight: no gap between list items or their inner text. */
+.block-text__body :deep(li) {
+  margin: 0;
+}
+
+.block-text__body :deep(li p) {
+  text-indent: 0;
+  margin: 0;
 }
 
 .block-text__body--sticker {

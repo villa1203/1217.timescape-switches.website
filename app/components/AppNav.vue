@@ -3,23 +3,24 @@
     >
       <div class="app-grid app-grid--justify-between">
         <div class="nav-left">
-          <StickerButton :text="shabbatText" to="/" :font_size="24" />
+          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :flip="isDark" />
         </div>
 
-        <div>
+        <div :class="['nav-right', { 'nav-right--hidden': isOpen, 'nav-right--scroll-hidden': hiddenOnScroll, 'nav-right--locked': isDark }]">
           <div class="app-grid">
             <div>
               <StickerButton
                 text="Research"
                 @click="openResearch"
-                :font_size="24"
+                :font_size="navFontSize"
                 color="var(--app-color-primary)"
                 :active="researchActive"
+                :flip="isDark"
               />
             </div>
 
             <div>
-              <StickerButton text="Info" to="/info" :font_size="24" :active="isInfoPage" />
+              <StickerButton text="Info" to="/info" :font_size="navFontSize" :active="isInfoPage" :flip="isDark" />
             </div>
           </div>
         </div>
@@ -36,22 +37,71 @@
 <script setup lang="ts">
 import { useShabbatCountdown } from '~/composables/useShabbatCountdown'
 import { useResearchOverlay } from '~/composables/useResearchOverlay'
+import { useIsMobile } from '~/composables/useIsMobile'
+import { useDarkMode } from '~/composables/useDarkMode'
 
-const { text: shabbatText } = useShabbatCountdown()
+const { text: shabbatText, isShabbat } = useShabbatCountdown()
+const { isDark } = useDarkMode()
 const { toggle: openResearch, isOpen } = useResearchOverlay()
+const { isMobile } = useIsMobile()
+const navFontSize = computed(() => isMobile.value ? 18 : 24)
 const route = useRoute()
 const researchActive = computed(() => isOpen.value || route.path.startsWith('/research'))
 const isInfoPage = computed(() => route.path.startsWith('/info'))
 let userLocation: { latitude: number; longitude: number; city?: string } | null = null
 
+/* ── Hide Research/Info on scroll-down, show on scroll-up ──
+   Scrolling happens in different containers depending on page/viewport (the
+   columns' inner scroller on desktop, the body on mobile, the object page's
+   right column…). A capture-phase scroll listener on window catches scroll
+   events from any of them as they propagate down to their target. */
+const hiddenOnScroll = ref(false)
+let lastY = 0
+let lastTarget: EventTarget | null = null
+let scrollTicking = false
+
+function scrollTopOf(target: EventTarget | null): number {
+  if (!target || target === document || target === window) {
+    return window.scrollY || document.scrollingElement?.scrollTop || 0
+  }
+  return (target as HTMLElement).scrollTop ?? 0
+}
+
+function onScrollCapture(e: Event) {
+  if (scrollTicking) return
+  scrollTicking = true
+  const target = e.target
+  requestAnimationFrame(() => {
+    scrollTicking = false
+    const y = scrollTopOf(target)
+    // Reset the baseline when the scrolling element changes (e.g. navigation).
+    if (target !== lastTarget) {
+      lastTarget = target
+      lastY = y
+      return
+    }
+    const dy = y - lastY
+    if (Math.abs(dy) < 6) return            // ignore jitter
+    if (dy > 0 && y > 80) hiddenOnScroll.value = true   // scrolling down, past a small offset
+    else if (dy < 0)      hiddenOnScroll.value = false  // scrolling up
+    lastY = y
+  })
+}
+
 // Fetch Shabbat countdown on mount
 onMounted(async () => {
+  window.addEventListener('scroll', onScrollCapture, { capture: true, passive: true })
+
   // Get user's location first
   await getUserLocation()
   // Then fetch Shabbat times
   await updateShabbatCountdown()
   // Update every minute
   setInterval(updateShabbatCountdown, 60000)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', onScrollCapture, { capture: true } as EventListenerOptions)
 })
 
 // Get user's geolocation
@@ -160,18 +210,30 @@ async function updateShabbatCountdown() {
 
     const now = new Date()
 
+    // Weekly Shabbat only — ignore religious-holiday (Yom Tov) candle-lighting
+    // and havdalah that the Shabbat API also returns. Shabbat candle-lighting is
+    // always on a Friday (day 5) and havdalah on a Saturday (day 6).
+    const isFriday   = (d: Date) => d.getDay() === 5
+    const isSaturday = (d: Date) => d.getDay() === 6
+
+    const isShabbatCandle   = (item: any) => item.category === 'candles'   && isFriday(new Date(item.date))
+    const isShabbatHavdalah = (item: any) => item.category === 'havdalah' && isSaturday(new Date(item.date))
+
     // Find candle lighting and havdalah times
     const candleLighting = items.find((item: any) =>
-      item.category === 'candles' && new Date(item.date) > now
+      isShabbatCandle(item) && new Date(item.date) > now
     )
     const havdalah = items.find((item: any) =>
-      item.category === 'havdalah' && new Date(item.date) > now
+      isShabbatHavdalah(item) && new Date(item.date) > now
     )
 
-    // Check if we're currently in Shabbat
-    const previousCandleLighting = items.find((item: any) =>
-      item.category === 'candles' && new Date(item.date) <= now
+    // Check if we're currently in Shabbat (most recent past Friday candle-lighting)
+    const previousCandleLighting = items.findLast((item: any) =>
+      isShabbatCandle(item) && new Date(item.date) <= now
     )
+
+    // Default to "not Shabbat"; the active branch below flips it back on.
+    isShabbat.value = false
 
     if (previousCandleLighting && havdalah) {
       const candleTime = new Date(previousCandleLighting.date)
@@ -179,6 +241,7 @@ async function updateShabbatCountdown() {
 
       // If we're between candle lighting and havdalah, Shabbat is active
       if (now >= candleTime && now < havdalahTime) {
+        isShabbat.value = true   // → site switches to dark mode
         const timeDiff = havdalahTime.getTime() - now.getTime()
         const hours = Math.floor(timeDiff / (1000 * 60 * 60))
         const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
@@ -187,9 +250,9 @@ async function updateShabbatCountdown() {
         const minuteText = minutes === 1 ? 'minute' : 'minutes'
 
         if (hours > 0) {
-          shabbatText.value = `You entered a Timescape,\nit will end in ${hours} ${hourText}, ${minutes} ${minuteText}`
+          shabbatText.value = `Weekly Timescape\nends in ${hours} ${hourText}, ${minutes} ${minuteText}`
         } else {
-          shabbatText.value = `You entered a Timescape,\nit will end in ${minutes} ${minuteText}`
+          shabbatText.value = `Weekly Timescape\nends in ${minutes} ${minuteText}`
         }
         return
       }
@@ -249,6 +312,34 @@ async function updateShabbatCountdown() {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+// Desktop: when the Research overlay is open, hide the Research + Info buttons
+// (the overlay has its own close button in the top-right). Fade matches the
+// overlay's own 0.3s opacity transition. On mobile the overlay covers the
+// whole nav anyway, so we leave the buttons untouched there.
+.nav-right {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.nav-right--hidden {
+  @media (min-width: 769px) {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+// Hidden while scrolling down (all viewports); slides back in on scroll up.
+.nav-right--scroll-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-0.5rem);
+}
+
+// Shabbat: the navigation is dimmed and not interactive (the site stays on the
+// home — other pages are inaccessible during Shabbat).
+.nav-right--locked {
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .v-nav__infos {

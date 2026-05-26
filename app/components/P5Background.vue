@@ -1,9 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type p5Type from 'p5'
+import { useShabbatCountdown } from '~/composables/useShabbatCountdown'
 
 const containerRef = ref<HTMLDivElement | null>(null)
 let p5Instance: p5Type | null = null
+
+// Dark (Shabbat) mode — mirrors app.vue. White lines on black instead of the
+// default black lines on white. `?shabbat`/`?dark` preview flag is shared via
+// the same `previewDark` state.
+const { isShabbat } = useShabbatCountdown()
+const previewDark = useState('previewDark', () => false)
+const isDark = computed(() => isShabbat.value || previewDark.value)
 
 onMounted(async () => {
   const p5 = (await import('p5')).default
@@ -30,14 +38,17 @@ onMounted(async () => {
       p.pixelDensity(p.displayDensity())
       p.colorMode(p.HSB, 360, 100, 100, 1)
       p.noFill()
-      p.stroke(24, 100, 100, 0.5) // #FF6600 in HSB, 50% alpha — matches --app-color-secondary
+      // Stroke colour is (re)set each frame in draw() so it reacts to dark mode.
       p.strokeWeight(sw)
       p.strokeCap(p.SQUARE)
       values()
     }
 
     p.draw = () => {
-      p.background(0, 0, 100)
+      const dark = isDark.value
+      // Shabbat: black background + white lines. Otherwise: white bg + black lines.
+      p.background(0, 0, dark ? 0 : 100)
+      p.stroke(0, 0, dark ? 100 : 0, 0.5)
 
       const wSpc = p.width / lCount
       const hSpc = p.height / rCount

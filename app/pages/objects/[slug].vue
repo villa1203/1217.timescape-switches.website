@@ -5,11 +5,15 @@
       <!-- Left: 3D viewer — hover reveals the transparent xray (mode='normal') -->
       <div class="v-slug__left">
         <div class="viewer-section">
+          <!-- Mount only once the CMS model URL is available; otherwise the
+               component would load its (now-removed) /public fallback and 404. -->
           <component
-            v-if="threeComponent"
+            v-if="threeComponent && data?.result.model?.url"
             :is="threeComponent"
             :mode="transparentOn ? 'glass' : 'normal'"
+            :src="data?.result.model?.url"
           />
+          <DarkModeToggle />
         </div>
       </div>
 
@@ -67,6 +71,8 @@ type FetchData = CMS_API_Response & {
     baseline: string
     cover_front: CMS_API_ImageInstance[]
     cover_back: CMS_API_ImageInstance[]
+    // 3D model file uploaded in the CMS (model_3d tab). Null when none set.
+    model: { url: string, filename: string } | null
   }
 }
 

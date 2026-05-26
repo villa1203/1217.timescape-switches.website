@@ -1,25 +1,38 @@
 <template>
   <Teleport to="body">
-    <div class="research-overlay" :class="{ 'is-open': isOpen }">
+    <!--
+      Close button is a sibling of .research-overlay (not a child) so its
+      z-index isn't trapped in the overlay's stacking context. That lets it
+      sit above the app header (z-index: 500 on desktop) which itself stays
+      visible above the overlay (z-index: 400) while research is open.
+    -->
+    <OverlayCloseButton :open="isOpen" @close="close" />
 
-      <!-- Body: left preview + right list (the real header / footer stay
-           visible above this overlay via a higher z-index) -->
+    <div class="research-overlay" :class="{ 'is-open': isOpen, 'is-selecting': isSelecting }">
+
+      <!-- Body: left preview + right list -->
       <div class="overlay-body">
 
         <!-- Left half: 3D model — each component mounts once on first hover and stays alive -->
         <div class="overlay-preview">
           <template v-for="obj in objects" :key="obj.id">
             <div
-              v-if="mountedIds[obj.id]"
+              v-if="mountedIds[obj.id] && modelUrlBySlug[obj.slug]"
               :class="['preview-mount', { 'is-active': activeObject?.id === obj.id }]"
             >
-              <component :is="obj.component" mode="plain" :paused="activeObject?.id !== obj.id" />
+              <component :is="obj.component" mode="glass" :paused="activeObject?.id !== obj.id" :src="modelUrlBySlug[obj.slug]" />
             </div>
           </template>
         </div>
 
         <!-- Right half: hierarchy + list -->
-        <div class="overlay-list">
+        <div
+          class="overlay-list"
+          @touchstart="onTouchStart"
+          @touchmove="onTouchMove"
+          @touchend="onTouchEnd"
+          @touchcancel="onTouchCancel"
+        >
           <div class="list-content">
 
             <span class="list-label">Origin</span>
@@ -28,10 +41,11 @@
               to="/research"
               @click="close"
               class="design-time overlay-nav-link"
+              data-selectable-id="design-time"
               @mouseenter="designTimeHover = true"
               @mouseleave="designTimeHover = false"
             >
-              <StickerParagraph text="Design & Time" :font_size="32" :inverted="designTimeHover" />
+              <StickerParagraph text="Design & Time" :font_size="32" :inverted="designTimeHover || activeSelectableId === 'design-time'" />
             </NuxtLink>
 
             <span class="list-label">Objects</span>
@@ -41,6 +55,7 @@
                 v-for="obj in objects"
                 :key="obj.id"
                 class="objects-list__item"
+                :data-selectable-id="obj.id"
                 @mouseenter="onObjectEnter(obj)"
               >
                 <NuxtLink :to="`/objects/${obj.slug}`" @click="close" class="overlay-nav-link">
@@ -63,10 +78,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, onUnmounted, defineAsyncComponent } from 'vue'
 import { useResearchOverlay } from '~/composables/useResearchOverlay'
 
 const { isOpen, close } = useResearchOverlay()
+
+// Fetch each object's CMS 3D model URL so the hover preview loads the same .glb
+// as the detail page. (The bundled /public/*.glb fallbacks were removed once
+// the models moved into the CMS, so the preview must get its URL from there.)
+const { data: modelsData } = useFetch<{ result: { slug: string; model: { url: string } | null }[] }>(
+  '/api/CMS_KQLRequest',
+  {
+    lazy: true,
+    method: 'POST',
+    body: {
+      query: "page('objects').children.listed",
+      select: {
+        slug: true,
+        model: { query: 'page.model_file.toFile', select: { url: true } },
+      },
+    },
+  },
+)
+
+const modelUrlBySlug = computed<Record<string, string>>(() => {
+  const map: Record<string, string> = {}
+  for (const o of modelsData.value?.result ?? []) {
+    if (o.model?.url) map[o.slug] = o.model.url
+  }
+  return map
+})
 
 const ThreeKettle    = defineAsyncComponent(() => import('./ThreeKettle.vue'))
 const ThreeSwitch    = defineAsyncComponent(() => import('./ThreeSwitch.vue'))
@@ -84,13 +125,127 @@ const objects = [
   { id: 'lamp',      label: 'Kosher Lamp',           slug: 'kosher-lamp',             component: ThreeLamp },
 ]
 
-const activeObject    = ref<typeof objects[0] | null>(null)
-const mountedIds      = ref<Record<string, boolean>>({})
-const designTimeHover = ref(false)
+const activeObject      = ref<typeof objects[0] | null>(null)
+const mountedIds        = ref<Record<string, boolean>>({})
+const designTimeHover   = ref(false)
+const isSelecting       = ref(false)
+const activeSelectableId = ref<string | null>(null)
+
+type Selectable = { id: string; href: string; objectIndex: number }
+
+const selectables: Selectable[] = [
+  { id: 'design-time', href: '/research', objectIndex: -1 },
+  ...objects.map((o, i) => ({ id: o.id, href: `/objects/${o.slug}`, objectIndex: i })),
+]
 
 function onObjectEnter(obj: typeof objects[0]) {
   mountedIds.value[obj.id] = true
   activeObject.value = obj
+}
+
+function enterSelectable(idx: number) {
+  const s = selectables[idx]
+  if (!s) return
+  activeSelectableId.value = s.id
+  if (s.objectIndex >= 0) {
+    onObjectEnter(objects[s.objectIndex])
+  } else {
+    activeObject.value = null
+  }
+}
+
+/* ── Mobile touch interaction ──
+   Long-press (~250ms) on the right column activates "selection mode":
+   the user drags up/down to step through objects (one step ≈ 50px),
+   and releasing the finger navigates to the active object's page.
+*/
+const LONG_PRESS_MS    = 250
+const STEP_PX          = 28
+const CANCEL_THRESHOLD = 10
+
+let pressTimer: ReturnType<typeof setTimeout> | null = null
+let startTouchX = 0
+let startTouchY = 0
+let originIndex = 0
+let originY     = 0
+
+const router = useRouter()
+
+function findSelectableIndexAt(x: number, y: number): number {
+  const el = document.elementFromPoint(x, y) as HTMLElement | null
+  if (!el) return -1
+  const node = el.closest('[data-selectable-id]') as HTMLElement | null
+  if (!node) return -1
+  const id = node.getAttribute('data-selectable-id')
+  return selectables.findIndex(s => s.id === id)
+}
+
+function clearPressTimer() {
+  if (pressTimer) {
+    clearTimeout(pressTimer)
+    pressTimer = null
+  }
+}
+
+function onTouchStart(e: TouchEvent) {
+  if (e.touches.length !== 1) return
+  startTouchX = e.touches[0].clientX
+  startTouchY = e.touches[0].clientY
+
+  clearPressTimer()
+  pressTimer = setTimeout(() => {
+    pressTimer = null
+    let idx = findSelectableIndexAt(startTouchX, startTouchY)
+    if (idx < 0 || idx >= selectables.length) idx = 0
+    originY     = startTouchY
+    originIndex = idx
+    isSelecting.value = true
+    enterSelectable(idx)
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10)
+  }, LONG_PRESS_MS)
+}
+
+function onTouchMove(e: TouchEvent) {
+  if (e.touches.length !== 1) return
+  const currentY = e.touches[0].clientY
+
+  if (!isSelecting.value) {
+    // Treat any significant movement before the long-press fires as a scroll → cancel.
+    if (Math.abs(currentY - startTouchY) > CANCEL_THRESHOLD) clearPressTimer()
+    return
+  }
+
+  // Selection mode: lock scroll, step through selectables by vertical distance.
+  if (e.cancelable) e.preventDefault()
+
+  const delta = currentY - originY
+  const steps = Math.round(delta / STEP_PX)
+  const newIndex = Math.max(0, Math.min(selectables.length - 1, originIndex + steps))
+
+  if (activeSelectableId.value !== selectables[newIndex].id) {
+    enterSelectable(newIndex)
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(5)
+  }
+}
+
+function onTouchEnd(e: TouchEvent) {
+  clearPressTimer()
+  if (!isSelecting.value) return
+
+  if (e.cancelable) e.preventDefault() // suppress synthetic click on the underlying link
+  const id = activeSelectableId.value
+  const target = selectables.find(s => s.id === id)
+  isSelecting.value = false
+  activeSelectableId.value = null
+  if (target) {
+    router.push(target.href)
+  }
+}
+
+function onTouchCancel() {
+  clearPressTimer()
+  isSelecting.value = false
+  activeSelectableId.value = null
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -118,6 +273,9 @@ watch(isOpen, (val) => {
     document.removeEventListener('keydown', onKeydown)
     document.body.style.overflow = ''
     activeObject.value = null
+    clearPressTimer()
+    isSelecting.value = false
+    activeSelectableId.value = null
   }
 })
 
@@ -132,7 +290,16 @@ onUnmounted(() => {
 .research-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 400;
+
+  // Selection-mode (long-press drag on mobile): kill text selection + native scroll.
+  &.is-selecting {
+    user-select: none;
+    -webkit-user-select: none;
+
+    .overlay-list { touch-action: none; }
+    .overlay-nav-link { pointer-events: none; }
+  }
   background: #ffffff;
   opacity: 0;
   visibility: hidden; // cascades to descendants — they aren't click/scroll targets when closed
@@ -174,19 +341,37 @@ onUnmounted(() => {
   text-decoration: none;
 }
 
+/* ── close button: extracted to <OverlayCloseButton> ── */
+
 /* ── split body ── */
 .overlay-body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   height: 100vh;
 
-  // Mobile: stack — 3D preview on top, list below; allow page scroll inside the overlay
+  // Mobile: full-page, right column layered on top of left column (3D preview behind)
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    grid-template-rows: 50vh auto;
-    height: auto;
+    grid-template-rows: 1fr;
+    height: 100vh;
     min-height: 100vh;
-    overflow-y: auto;
+    position: relative;
+
+    .overlay-preview {
+      grid-column: 1;
+      grid-row: 1;
+      z-index: 1;
+    }
+
+    .overlay-list {
+      grid-column: 1;
+      grid-row: 1;
+      z-index: 2;
+      background: transparent;
+      overflow-y: auto;
+      padding-top: 4rem;
+      align-items: flex-start;
+    }
   }
 }
 
@@ -274,6 +459,15 @@ onUnmounted(() => {
   overflow: visible;
   transition: transform 0.15s ease;
 
+  // Later items cover earlier items' overflowing SVGs — needed for multi-line labels
+  // (e.g. "Shabbat Refrigerator") whose SVG would otherwise sit on top of the next item.
+  &:nth-child(1) { z-index: 1; }
+  &:nth-child(2) { z-index: 2; }
+  &:nth-child(3) { z-index: 3; }
+  &:nth-child(4) { z-index: 4; }
+  &:nth-child(5) { z-index: 5; }
+  &:nth-child(6) { z-index: 6; }
+
   // SVG overflow must not intercept events destined for the item below.
   :deep(svg) { pointer-events: none; }
 
@@ -285,6 +479,17 @@ onUnmounted(() => {
 
   &:hover {
     transform: translateX(-6px);
+  }
+
+  // Mobile: disable the SVG-overflow stacking trick so labels don't bleed onto each other.
+  // Multi-line labels ("Shabbat Refrigerator") otherwise overlap the next item visually.
+  @media (max-width: 768px) {
+    height: auto;
+    margin-bottom: 0.5rem;
+
+    &:last-child {
+      height: auto;
+    }
   }
 }
 

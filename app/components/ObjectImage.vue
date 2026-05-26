@@ -31,7 +31,6 @@ defineProps<{
 .object-image__img {
   display: block;
   width: 100%;
-  max-width: 28rem;
   height: auto;
   border-radius: 1.5rem;
   object-fit: cover;

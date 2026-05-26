@@ -1,6 +1,5 @@
 <template>
   <button
-    v-if="isObjectPage"
     class="sticker-toggle"
     :class="{ 'is-on': isOn }"
     :aria-pressed="isOn"
@@ -12,12 +11,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useTransparentMode } from '~/composables/useTransparentMode'
 
 const { isOn, toggle } = useTransparentMode()
-const route = useRoute()
-const isObjectPage = computed(() => route.path.startsWith('/objects/'))
 </script>
 
 <style scoped lang="scss">
@@ -69,6 +65,13 @@ $glow-alpha:   0.65;
   &.is-on {
     background: $color;
     box-shadow: inset 0 0 $glow-pill rgba($bg, $glow-alpha);
+  }
+
+  // Mobile: anchored to the 3D viewer (its positioned ancestor, .viewer-section)
+  // instead of the viewport, so it sits at the bottom-right corner of the
+  // object itself. right/bottom stay 1.5rem — now measured from the viewer.
+  @media (max-width: 768px) {
+    position: absolute;
   }
 }
 

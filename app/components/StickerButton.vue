@@ -10,6 +10,7 @@ const props = defineProps<{
   stroke_width?: number
   font_size?: number
   active?: boolean
+  flip?: boolean   // invert the default state: filled by default, plain on hover
 }>()
 
 const isHovered = ref(false)
@@ -17,7 +18,9 @@ const isNuxtLink = computed(() => !!props.to)
 const isExternalLink = computed(() => !!props.href)
 
 const baseColor = computed(() => props.color || 'var(--app-color-primary)')
-const isInverted = computed(() => isHovered.value || !!props.active)
+// Normally inverted on hover/active. With `flip` (e.g. Shabbat mode) the default
+// is the inverted (purple-filled) look and hover/active flips back to plain.
+const isInverted = computed(() => (isHovered.value || !!props.active) !== !!props.flip)
 </script>
 
 <template>

@@ -146,4 +146,16 @@ export const KQL_PROJECTS_SELECT = {
   },
   strategies: true,
   baseline: true,
+
+  // 3D model file (from the reusable model_3d blueprint tab). The front-end
+  // object component loads this .glb URL instead of a hard-coded /public path.
+  // Field is "model_file" (not "model") — "model" collides with Kirby's
+  // reserved Page::model() method, which KQL refuses to query.
+  model: {
+    query: "page.model_file.toFile",
+    select: {
+      url: true,
+      filename: true,
+    },
+  },
 }

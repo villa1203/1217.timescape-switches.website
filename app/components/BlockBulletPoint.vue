@@ -48,7 +48,8 @@ defineProps<{
   display: grid;
   grid-template-columns: 1fr 1fr;
   column-gap: var(--app-grid-gap, 2rem);
-  row-gap: 1.5rem;
+  // Vertical spacing between bullet-point items.
+  row-gap: 0.5rem;
 }
 
 .block-bullet-point__item {

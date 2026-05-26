@@ -5,6 +5,16 @@ export default defineNuxtConfig({
 
   app: {
     baseURL: '/',
+    head: {
+      link: [
+        // Custom TMS favicon (served from /public). The PNG variant takes
+        // precedence over the legacy /favicon.ico that Nuxt would otherwise
+        // pick up automatically.
+        { rel: 'icon', type: 'image/png', href: '/Favicontms.png' },
+        { rel: 'shortcut icon', type: 'image/png', href: '/Favicontms.png' },
+        { rel: 'apple-touch-icon', href: '/Favicontms.png' },
+      ],
+    },
   },
 
   css: ['~/assets/_main.scss'],

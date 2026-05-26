@@ -59,8 +59,10 @@ h1, .app-text-h1 {
 h2, .app-text-h2 {
   font-family: 'Happy Times NG', Georgia, serif;
   font-weight: 400;
-  max-width: 35em;
   margin-top: 3rem;
+  // Shrink to the content's width so a short sticker title doesn't leave empty
+  // space on the right (the heading box no longer fills 100% of the parent).
+  width: fit-content;
 }
 
 h3, .app-text-h3 {
@@ -69,6 +71,7 @@ h3, .app-text-h3 {
   font-size: 24px;
   line-height: 100%;
   margin-top: 2rem;
+  width: fit-content;
 }
 
 h4 {
@@ -82,7 +85,6 @@ p, .app-text-reg {
   font-weight: 400;
   font-size: 1.2rem;
   line-height: 120%;
-  max-width: 40em;
 }
 
 strong, .app-text-strong {

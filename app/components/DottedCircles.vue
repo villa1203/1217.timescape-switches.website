@@ -1,7 +1,10 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   color?: string
+  stroke_width?: number
 }>()
+
+const sw = computed(() => props.stroke_width ?? 1.5)
 </script>
 
 <template>
@@ -16,7 +19,7 @@ defineProps<{
     <ellipse
       cx="146" cy="356" rx="145.5" ry="355.5"
       :stroke="color || 'black'"
-      stroke-width="1.5"
+      :stroke-width="sw"
       stroke-linecap="round"
       stroke-dasharray="10 10"
     />
@@ -24,7 +27,7 @@ defineProps<{
     <circle
       cx="423" cy="357" r="355"
       :stroke="color || 'black'"
-      stroke-width="1.5"
+      :stroke-width="sw"
       stroke-linecap="round"
       stroke-dasharray="10 10"
     />
@@ -32,7 +35,7 @@ defineProps<{
     <circle
       cx="781" cy="357" r="355"
       :stroke="color || 'black'"
-      stroke-width="1.5"
+      :stroke-width="sw"
       stroke-linecap="round"
       stroke-dasharray="10 10"
     />
@@ -40,7 +43,7 @@ defineProps<{
     <circle
       cx="1138" cy="357" r="355"
       :stroke="color || 'black'"
-      stroke-width="1.5"
+      :stroke-width="sw"
       stroke-linecap="round"
       stroke-dasharray="10 10"
     />
@@ -48,7 +51,7 @@ defineProps<{
     <ellipse
       cx="1419" cy="356" rx="145.5" ry="355.5"
       :stroke="color || 'black'"
-      stroke-width="1.5"
+      :stroke-width="sw"
       stroke-linecap="round"
       stroke-dasharray="10 10"
     />
