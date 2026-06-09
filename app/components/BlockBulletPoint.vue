@@ -31,6 +31,10 @@ defineProps<{
 
 <style scoped lang="scss">
 .block-bullet-point {
+  // Spacing between each title+text group, and between a title and its text.
+  --block-bullet-point-row-gap: 2.5rem;
+  --block-bullet-point-item-gap: 0.5rem;
+
   box-sizing: border-box;
   width: 100%;
   display: flex;
@@ -48,18 +52,19 @@ defineProps<{
   display: grid;
   grid-template-columns: 1fr 1fr;
   column-gap: var(--app-grid-gap, 2rem);
-  // Vertical spacing between bullet-point items.
-  row-gap: 0.5rem;
+  // Larger vertical spacing between each title+text group so the groups
+  // read as distinct blocks rather than running together.
+  row-gap: var(--block-bullet-point-row-gap);
 }
 
 .block-bullet-point__item {
   display: flex;
   flex-direction: column;
+  // Consistent spacing between a group's title and its text.
+  gap: var(--block-bullet-point-item-gap);
 }
 
 .block-bullet-point__item__title {
-  min-height: 2.5rem;
-
   h3 {
     margin: 0;
   }

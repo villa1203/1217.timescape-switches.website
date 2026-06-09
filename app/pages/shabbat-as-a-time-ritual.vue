@@ -1,19 +1,19 @@
 <template>
-  <main class="v-research"
+  <main class="v-shabbat"
   >
 
     <AppLayoutColumns>
       <template v-slot:first>
         <Blocks
-          v-if="data?.result.content_secondary"
-          :content="data?.result.content_secondary"
+          v-if="data?.result?.content_secondary"
+          :content="data?.result?.content_secondary"
           :sticker="true"
         />
       </template>
       <template v-slot:second>
         <Blocks
-          v-if="data?.result.content"
-          :content="data?.result.content"
+          v-if="data?.result?.content"
+          :content="data?.result?.content"
         />
       </template>
     </AppLayoutColumns>
@@ -42,7 +42,7 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
   // Not lazy: SEO meta must be in the server-rendered HTML for crawlers.
   method: 'POST',
   body: {
-    query: `page('research')`,
+    query: `page('shabbat-as-a-time-ritual')`,
     select: {
       title: true,
       slug: true,
@@ -61,7 +61,7 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
 useCmsSeo(() => ({
   page: data.value?.result,
   site: data.value?.result?.site,
-  path: '/research',
+  path: '/shabbat-as-a-time-ritual',
   fallbackTitle: data.value?.result?.title,
 }))
 
@@ -69,6 +69,6 @@ useCmsSeo(() => ({
 
 
 <style lang="scss" scoped>
-.v-research {
+.v-shabbat {
 }
 </style>

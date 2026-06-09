@@ -35,6 +35,8 @@
 import { ref } from 'vue'
 import type {CMS_API_Response, CMS_BlockData} from "#shared/cms_api";
 import AppLayoutColumns from "~/components/AppLayoutColumns.vue";
+import { seoSelect, siteSeoSelect } from "#shared/KQLQueries";
+import { useCmsSeo, type CmsSeoFields, type CmsSiteSeo } from "~/composables/useCmsSeo";
 
 const viewerMode = ref('normal')
 
@@ -44,11 +46,12 @@ type FetchData = CMS_API_Response & {
     "slug": string,
     content: CMS_BlockData[]
     content_secondary: CMS_BlockData[]
-  }
+    site: CmsSiteSeo
+  } & CmsSeoFields
 }
 
 const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
-  lazy: true,
+  // Not lazy: SEO meta must be in the server-rendered HTML for crawlers.
   method: 'POST',
   body: {
     query: `page('infos')`,
@@ -61,9 +64,18 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
       content_secondary: {
         query: `page.content.content_secondary.toBlocks`,
       },
+      ...seoSelect('page'),
+      site: { query: 'site', select: siteSeoSelect() },
     }
   }
 })
+
+useCmsSeo(() => ({
+  page: data.value?.result,
+  site: data.value?.result?.site,
+  path: '/info',
+  fallbackTitle: data.value?.result?.title,
+}))
 
 </script>
 

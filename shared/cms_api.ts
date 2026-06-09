@@ -25,6 +25,19 @@ export type CMS_API_Image = {
   "width": number
 }
 
+// Responsive srcset from a CMS image instance (small 500w / reg 1280w / large
+// 1920w). Lets the browser pick the right size — mobile downloads ~500px instead
+// of the full 1920px.
+export function buildSrcset(image?: CMS_API_ImageInstance | null): string {
+  if (!image) return ''
+  const out: string[] = []
+  const add = (img?: CMS_API_Image) => { if (img?.url && img.width) out.push(`${img.url} ${img.width}w`) }
+  add(image.small)
+  add(image.reg)
+  add(image.large)
+  return out.join(', ')
+}
+
 export type CMS_API_Page_projet = {
   title: string,
   baseline: string,

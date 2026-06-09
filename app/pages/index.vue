@@ -1,13 +1,15 @@
 <template>
   <main class="v-index"
   >
-    <P5Background />
+    <!-- Sketch full-bleed behind the page (light mode only). In Shabbat (dark)
+         mode it stays clipped inside the circles instead — see DottedCircles. -->
+    <P5Background v-if="!isDark" />
     <div class="app-grid app-grid--align-center app-grid--justify-center"
     >
       <div class="app-grid__col-12">
         <div class="v-index__intro-container">
           <div class="app-grid app-grid--align-center app-grid--justify-center">
-            <DottedCircles class="hero-circles" :color="isDark ? '#fff' : '#000'" :stroke_width="isDark ? 0.75 : 1.5" />
+            <DottedCircles class="hero-circles" :color="isDark ? '#fff' : '#000'" :stroke_width="isDark ? 0.75 : 1.5" :sketch="isDark" :draw="true" :play="circlePlay" />
           </div>
           <div class="hero-logo-layer">
             <!-- Shabbat: a CMS-authored phrase replaces the logo. -->
@@ -18,7 +20,7 @@
             <svg v-for="n in 3" :key="n" width="1382" height="559" viewBox="0 0 1382 559" fill="none" xmlns="http://www.w3.org/2000/svg"
                  class="hero-svg"
             >
-              <g :filter="`url(#filter0_i_701_965-${n})`">
+              <g class="hero-svg__fill" :filter="`url(#filter0_i_701_965-${n})`">
                 <path d="M456.469 558.885C442.073 558.885 428.96 553.096 419.262 543.026C409.564 553.036 396.372 558.885 382.055 558.885C360.266 558.885 341.424 545.635 332.895 524.308C332.757 523.953 332.618 523.606 332.488 523.251L295.766 424.684C290.471 422.578 285.548 419.649 281.188 415.966C269.548 406.113 262.866 391.753 262.866 376.553C262.866 347.73 286.709 324.28 316.012 324.28H373.405C381.795 324.28 389.95 326.126 397.274 329.61C405.724 323.795 415.778 320.528 426.473 320.528C437.853 320.528 448.34 324.02 456.955 330.251C464.608 326.351 473.24 324.272 482.141 324.272H521.654C550.957 324.272 574.8 347.722 574.8 376.545C574.8 391.745 568.126 406.104 556.486 415.957C552.144 419.632 547.23 422.561 541.952 424.667L506.166 522.921C505.992 523.389 505.819 523.849 505.637 524.317C495.436 549.812 473.552 558.894 456.478 558.894L456.469 558.885Z" fill="white"/>
                 <path d="M242.577 558.886C214.435 558.886 186.692 553.79 168.041 545.228C148.601 536.675 135.999 517.783 135.505 496.378C135.505 496.378 133.217 436.548 133.217 436.505C132.671 421.175 137.984 406.919 148.176 396.356C149.962 394.501 151.877 392.803 153.905 391.251C146.85 376.692 143.279 360.764 143.279 343.675C143.279 283.637 191.589 240.065 258.152 240.065C275.217 240.065 297.76 241.304 320.901 250.941C321.369 251.131 321.828 251.339 322.287 251.547C342.499 260.733 354.554 279.434 354.554 301.576V343.684C354.554 356.561 350.126 368.928 342.074 378.504C339.907 381.086 337.515 383.426 334.95 385.506C356.279 409.606 360.907 434.494 360.907 451.54C360.907 479.973 348.505 507.722 326.889 527.662C305.057 547.802 275.113 558.894 242.577 558.894V558.886Z" fill="white"/>
                 <path d="M540.774 555.142C527.556 555.142 514.929 550.557 505.213 542.229C493.669 532.341 487.056 517.991 487.056 502.869C487.056 488.769 492.88 475.111 503.038 465.397C505.248 463.282 507.622 461.385 510.127 459.712V419.658C497.56 409.935 489.942 395.211 489.942 378.867C489.942 353.424 508.056 332.366 533.987 327.651L568.473 321.386C571.975 320.701 575.52 320.363 579.03 320.363C608.411 320.363 631.43 343.657 631.43 373.399V459.729C633.944 461.402 636.318 463.3 638.529 465.414C648.686 475.129 654.51 488.786 654.51 502.886C654.51 518.008 647.889 532.35 636.353 542.247C626.637 550.575 614.001 555.168 600.784 555.168H540.791L540.774 555.142Z" fill="white"/>
@@ -90,28 +92,69 @@
 
 <script setup lang="ts">
 import type { CMS_API_Response } from "#shared/cms_api";
+import { onBeforeRouteLeave } from 'vue-router'
 import { useDarkMode } from '~/composables/useDarkMode'
 import { useIsMobile } from '~/composables/useIsMobile'
+import { useResearchOverlay } from '~/composables/useResearchOverlay'
+import { useAppLoader } from '~/composables/useAppLoader'
+import { useCmsSeo, type CmsSiteSeo } from '~/composables/useCmsSeo'
+import { siteSeoSelect } from '#shared/KQLQueries'
 
 const { isDark } = useDarkMode()
 const { isMobile } = useIsMobile()
+const { isOpen: isResearchOpen } = useResearchOverlay()
+const { loaderDone } = useAppLoader()
+
+// Drives the hero circles' trace animation (see DottedCircles `play`):
+//   'in'    → draw on        (returning to the home, closing Research)
+//   'out'   → erase          (opening Research, navigating away)
+//   'shown' → already drawn  (initial load — the loader played the draw)
+const circlePlay = ref<'in' | 'out' | 'shown'>('shown')
+
+// How long to let the erase play before actually navigating away from the home.
+const LEAVE_ERASE_MS = 800
+
+onMounted(() => {
+  // On a fresh load the intro loader plays the draw, so the home circles start
+  // already drawn. Arriving via client navigation (loader already done) instead
+  // replays the draw here.
+  circlePlay.value = loaderDone.value ? 'in' : 'shown'
+})
+
+// Opening the Research overlay erases the circles; closing it redraws them.
+watch(isResearchOpen, (open) => {
+  circlePlay.value = open ? 'out' : 'in'
+})
+
+// Leaving the home for another page: erase the circles first, then navigate.
+onBeforeRouteLeave(async () => {
+  circlePlay.value = 'out'
+  await new Promise((resolve) => setTimeout(resolve, LEAVE_ERASE_MS))
+})
 
 // Home page content from the Kirby `site` object: the Shabbat title shown in
-// place of the logo while in dark (Shabbat) mode.
+// place of the logo while in dark (Shabbat) mode, plus the site-level SEO that
+// doubles as the home's own SEO.
 type FetchData = CMS_API_Response & {
-  result: { shabbat_title: string }
+  result: { shabbat_title: string } & CmsSiteSeo
 }
 
 const { data } = useFetch<FetchData>('/api/CMS_KQLRequest', {
-  lazy: true,
+  // Not lazy: SEO meta must be in the server-rendered HTML for crawlers.
   method: 'POST',
   body: {
     query: 'site',
-    select: { shabbat_title: true },
+    select: {
+      shabbat_title: true,
+      ...siteSeoSelect(),
+    },
   },
 })
 
 const shabbatTitle = computed(() => data.value?.result?.shabbat_title ?? '')
+
+// The home's SEO is the site-level SEO (it maps to the Kirby `site` object).
+useCmsSeo(() => ({ page: data.value?.result, site: data.value?.result, path: '/' }))
 const shabbatTitleSize = computed(() => (isMobile.value ? 52 : 110))
 // Thicker blob than the default preset (which ignores font_size) so the span
 // scales with the big title.
@@ -160,6 +203,10 @@ const shabbatTitleStroke = computed(() => Math.round(shabbatTitleSize.value * 0.
   width: 85%;
   height: auto;
   z-index: 0;
+
+  // NB: the left↔right "swap" transition that used to play when Research opened
+  // or when navigating to Info has been removed — a new animation will replace
+  // it. (The `hero-circles--research` class is still toggled for that future use.)
 
   // Mobile: fixed vertical backdrop behind the panning logo. The circles SVG
   // is naturally wide, so we rotate it 90° — its pre-rotation width becomes the
@@ -230,18 +277,34 @@ const shabbatTitleStroke = computed(() => Math.round(shabbatTitleSize.value * 0.
   height: auto;
   z-index: 1;
 
+  // The white sticker fill of the logo is slightly translucent, so the sketch
+  // and circles behind show through it. Opacity on the whole filled group (not
+  // per-path) keeps overlapping shapes from compounding into darker patches.
+  .hero-svg__fill {
+    opacity: 0.85;
+  }
+
+  // Gentle vertical floating. On mobile the horizontal marquee lives on
+  // .hero-track (translateX), so this translateY on the copies doesn't clash.
+  animation: hero-float 3s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+
   // Desktop shows only the first copy; copies 2-3 exist solely for the
   // mobile marquee.
   &:nth-child(n + 2) {
     display: none;
   }
 
-  // Mobile: each copy stands ~80% of the viewport height; width follows the
+  // Mobile: each copy stands ~60% of the viewport height; width follows the
   // SVG aspect ratio. flex-shrink:0 keeps that intrinsic width intact.
   @media (max-width: 768px) {
-    height: 80vh;
+    height: 60vh;
     width: auto;
     flex-shrink: 0;
+    // Mobile scrolls (marquee) instead of floating.
+    animation: none;
 
     &:nth-child(n + 2) {
       display: block;
@@ -254,6 +317,12 @@ const shabbatTitleStroke = computed(() => Math.round(shabbatTitleSize.value * 0.
 @keyframes hero-marquee {
   from { transform: translateX(0); }
   to   { transform: translateX(calc(-100% / 3)); }
+}
+
+// Gentle floating bob for the centre hero logo.
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2%); }
 }
 
 .test-hover {

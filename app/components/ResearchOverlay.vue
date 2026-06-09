@@ -6,9 +6,13 @@
       sit above the app header (z-index: 500 on desktop) which itself stays
       visible above the overlay (z-index: 400) while research is open.
     -->
-    <OverlayCloseButton :open="isOpen" @close="close" />
+    <OverlayCloseButton
+      :open="isOpen"
+      :style="{ '--reveal-delay': isHome ? 'var(--overlay-open-delay)' : '0s' }"
+      @close="close"
+    />
 
-    <div class="research-overlay" :class="{ 'is-open': isOpen, 'is-selecting': isSelecting }">
+    <div class="research-overlay" :class="{ 'is-open': isOpen, 'is-home': isHome }">
 
       <!-- Body: left preview + right list -->
       <div class="overlay-body">
@@ -23,16 +27,15 @@
               <component :is="obj.component" mode="glass" :paused="activeObject?.id !== obj.id" :src="modelUrlBySlug[obj.slug]" />
             </div>
           </template>
+
+          <!-- Design & Time: an image preview in the same spot as the 3D models. -->
+          <div :class="['preview-mount', { 'is-active': designTimeHover }]">
+            <img src="/Frame1000003925.svg" alt="" class="preview-image" />
+          </div>
         </div>
 
         <!-- Right half: hierarchy + list -->
-        <div
-          class="overlay-list"
-          @touchstart="onTouchStart"
-          @touchmove="onTouchMove"
-          @touchend="onTouchEnd"
-          @touchcancel="onTouchCancel"
-        >
+        <div class="overlay-list">
           <div class="list-content">
 
             <span class="list-label">Origin</span>
@@ -40,12 +43,21 @@
             <NuxtLink
               to="/research"
               @click="close"
-              class="design-time overlay-nav-link"
-              data-selectable-id="design-time"
+              class="origin-link overlay-nav-link"
               @mouseenter="designTimeHover = true"
               @mouseleave="designTimeHover = false"
             >
-              <StickerParagraph text="Design & Time" :font_size="32" :inverted="designTimeHover || activeSelectableId === 'design-time'" />
+              <StickerParagraph text="Design & Time" :font_size="32" :inverted="designTimeHover" />
+            </NuxtLink>
+
+            <NuxtLink
+              to="/shabbat-as-a-time-ritual"
+              @click="close"
+              class="origin-link origin-link--last overlay-nav-link"
+              @mouseenter="shabbatHover = true"
+              @mouseleave="shabbatHover = false"
+            >
+              <StickerParagraph text="Shabbat as a time ritual" :font_size="32" :inverted="shabbatHover" />
             </NuxtLink>
 
             <span class="list-label">Objects</span>
@@ -55,7 +67,6 @@
                 v-for="obj in objects"
                 :key="obj.id"
                 class="objects-list__item"
-                :data-selectable-id="obj.id"
                 @mouseenter="onObjectEnter(obj)"
               >
                 <NuxtLink :to="`/objects/${obj.slug}`" @click="close" class="overlay-nav-link">
@@ -128,124 +139,11 @@ const objects = [
 const activeObject      = ref<typeof objects[0] | null>(null)
 const mountedIds        = ref<Record<string, boolean>>({})
 const designTimeHover   = ref(false)
-const isSelecting       = ref(false)
-const activeSelectableId = ref<string | null>(null)
-
-type Selectable = { id: string; href: string; objectIndex: number }
-
-const selectables: Selectable[] = [
-  { id: 'design-time', href: '/research', objectIndex: -1 },
-  ...objects.map((o, i) => ({ id: o.id, href: `/objects/${o.slug}`, objectIndex: i })),
-]
+const shabbatHover      = ref(false)
 
 function onObjectEnter(obj: typeof objects[0]) {
   mountedIds.value[obj.id] = true
   activeObject.value = obj
-}
-
-function enterSelectable(idx: number) {
-  const s = selectables[idx]
-  if (!s) return
-  activeSelectableId.value = s.id
-  if (s.objectIndex >= 0) {
-    onObjectEnter(objects[s.objectIndex])
-  } else {
-    activeObject.value = null
-  }
-}
-
-/* ── Mobile touch interaction ──
-   Long-press (~250ms) on the right column activates "selection mode":
-   the user drags up/down to step through objects (one step ≈ 50px),
-   and releasing the finger navigates to the active object's page.
-*/
-const LONG_PRESS_MS    = 250
-const STEP_PX          = 28
-const CANCEL_THRESHOLD = 10
-
-let pressTimer: ReturnType<typeof setTimeout> | null = null
-let startTouchX = 0
-let startTouchY = 0
-let originIndex = 0
-let originY     = 0
-
-const router = useRouter()
-
-function findSelectableIndexAt(x: number, y: number): number {
-  const el = document.elementFromPoint(x, y) as HTMLElement | null
-  if (!el) return -1
-  const node = el.closest('[data-selectable-id]') as HTMLElement | null
-  if (!node) return -1
-  const id = node.getAttribute('data-selectable-id')
-  return selectables.findIndex(s => s.id === id)
-}
-
-function clearPressTimer() {
-  if (pressTimer) {
-    clearTimeout(pressTimer)
-    pressTimer = null
-  }
-}
-
-function onTouchStart(e: TouchEvent) {
-  if (e.touches.length !== 1) return
-  startTouchX = e.touches[0].clientX
-  startTouchY = e.touches[0].clientY
-
-  clearPressTimer()
-  pressTimer = setTimeout(() => {
-    pressTimer = null
-    let idx = findSelectableIndexAt(startTouchX, startTouchY)
-    if (idx < 0 || idx >= selectables.length) idx = 0
-    originY     = startTouchY
-    originIndex = idx
-    isSelecting.value = true
-    enterSelectable(idx)
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10)
-  }, LONG_PRESS_MS)
-}
-
-function onTouchMove(e: TouchEvent) {
-  if (e.touches.length !== 1) return
-  const currentY = e.touches[0].clientY
-
-  if (!isSelecting.value) {
-    // Treat any significant movement before the long-press fires as a scroll → cancel.
-    if (Math.abs(currentY - startTouchY) > CANCEL_THRESHOLD) clearPressTimer()
-    return
-  }
-
-  // Selection mode: lock scroll, step through selectables by vertical distance.
-  if (e.cancelable) e.preventDefault()
-
-  const delta = currentY - originY
-  const steps = Math.round(delta / STEP_PX)
-  const newIndex = Math.max(0, Math.min(selectables.length - 1, originIndex + steps))
-
-  if (activeSelectableId.value !== selectables[newIndex].id) {
-    enterSelectable(newIndex)
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(5)
-  }
-}
-
-function onTouchEnd(e: TouchEvent) {
-  clearPressTimer()
-  if (!isSelecting.value) return
-
-  if (e.cancelable) e.preventDefault() // suppress synthetic click on the underlying link
-  const id = activeSelectableId.value
-  const target = selectables.find(s => s.id === id)
-  isSelecting.value = false
-  activeSelectableId.value = null
-  if (target) {
-    router.push(target.href)
-  }
-}
-
-function onTouchCancel() {
-  clearPressTimer()
-  isSelecting.value = false
-  activeSelectableId.value = null
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -255,6 +153,9 @@ function onKeydown(e: KeyboardEvent) {
 // Close the overlay on any navigation (clicking Info, the shabbat → home link,
 // Design & Time, an object name, etc. — anything that changes the route).
 const route = useRoute()
+// On the home the dotted circles play an erase animation when Research opens, so
+// the panel waits for it before fading in (see the .is-home delay in styles).
+const isHome = computed(() => route.path === '/')
 watch(() => route.fullPath, () => {
   if (isOpen.value) close()
 })
@@ -273,9 +174,6 @@ watch(isOpen, (val) => {
     document.removeEventListener('keydown', onKeydown)
     document.body.style.overflow = ''
     activeObject.value = null
-    clearPressTimer()
-    isSelecting.value = false
-    activeSelectableId.value = null
   }
 })
 
@@ -288,18 +186,13 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 /* ── overlay shell ── */
 .research-overlay {
+  // How long to wait before the panel covers the home — long enough for the
+  // dotted circles' erase animation to play (DottedCircles: 1.5s + 0.6s stagger).
+  --overlay-open-delay: 1.9s;
+
   position: fixed;
   inset: 0;
   z-index: 400;
-
-  // Selection-mode (long-press drag on mobile): kill text selection + native scroll.
-  &.is-selecting {
-    user-select: none;
-    -webkit-user-select: none;
-
-    .overlay-list { touch-action: none; }
-    .overlay-nav-link { pointer-events: none; }
-  }
   background: #ffffff;
   opacity: 0;
   visibility: hidden; // cascades to descendants — they aren't click/scroll targets when closed
@@ -307,11 +200,21 @@ onUnmounted(() => {
   // delay visibility change until after the fade-out completes
   transition: opacity 0.3s ease, visibility 0s linear 0.3s;
 
+  // Opening: by default (non-home, no circles) the panel fades in immediately.
+  // Closing (the default block above) also has no delay — it reveals the
+  // circles redrawing underneath.
   &.is-open {
     opacity: 1;
     visibility: visible;
     pointer-events: all;
     transition: opacity 0.3s ease, visibility 0s linear 0s;
+  }
+
+  // Home only: hold the panel back while the circles erase, then fade it in.
+  &.is-home.is-open {
+    transition:
+      opacity 0.3s ease var(--overlay-open-delay),
+      visibility 0s linear var(--overlay-open-delay);
   }
 }
 
@@ -398,6 +301,15 @@ onUnmounted(() => {
   }
 }
 
+/* Design & Time image preview — centred and contained like the 3D models. */
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
 /* ── right: list ── */
 .overlay-list {
   display: flex;
@@ -434,8 +346,13 @@ onUnmounted(() => {
   line-height: 1.6;
 }
 
-.design-time {
-  // Gap between the "Origin / Design & Time" block and the "Objects" section below
+// "Origin" links (Design & Time, Shabbat as a time ritual) sit tight together…
+.origin-link {
+  margin-bottom: 0.5rem;
+}
+
+// …with a larger gap after the last one before the "Objects" section.
+.origin-link--last {
   margin-bottom: 3rem;
 }
 

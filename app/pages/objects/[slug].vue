@@ -20,7 +20,8 @@
       <!-- Right: text content with independent scroll + edge fade -->
       <div class="v-slug__right">
         <h1 v-if="data?.result.title" class="v-slug__title">
-          <StickerParagraph :text="data.result.title" :font_size="48" :line_height="1.0" />
+          <!-- Title fills violet while the 3D transparent (glass) mode is on. -->
+          <StickerParagraph :text="data.result.title" :font_size="48" :line_height="1.0" :inverted="transparentOn" />
         </h1>
         <p v-if="data?.result.baseline" class="v-slug__baseline">{{ data.result.baseline }}</p>
 
@@ -39,12 +40,12 @@
 
         <nav class="v-slug__nav">
           <StickerButton
-            :text="`← ${prevObject.label}`"
+            text="← Previous"
             :to="`/objects/${prevObject.slug}`"
             :font_size="20"
           />
           <StickerButton
-            :text="`${nextObject.label} →`"
+            text="Next →"
             :to="`/objects/${nextObject.slug}`"
             :font_size="20"
           />
@@ -59,7 +60,8 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue'
 import { useTransparentMode } from '~/composables/useTransparentMode'
-import {KQL_PROJECTS_SELECT} from "#shared/KQLQueries";
+import {KQL_PROJECTS_SELECT, seoSelect, siteSeoSelect} from "#shared/KQLQueries";
+import { useCmsSeo, type CmsSeoFields, type CmsSiteSeo } from "~/composables/useCmsSeo";
 import type {CMS_API_ImageInstance, CMS_API_Response, CMS_BlockData} from "#shared/cms_api";
 
 type FetchData = CMS_API_Response & {
@@ -73,19 +75,32 @@ type FetchData = CMS_API_Response & {
     cover_back: CMS_API_ImageInstance[]
     // 3D model file uploaded in the CMS (model_3d tab). Null when none set.
     model: { url: string, filename: string } | null
-  }
+    site: CmsSiteSeo
+  } & CmsSeoFields
 }
 
 const route = useRoute()
 
 const {data} = await useFetch<FetchData>('/api/CMS_KQLRequest', {
-  lazy: true,
+  // Not lazy: SEO meta must be in the server-rendered HTML for crawlers.
   method: 'POST',
   body: {
     query: `page('objects/${route.params.slug}')`,
-    select: KQL_PROJECTS_SELECT,
+    select: {
+      ...KQL_PROJECTS_SELECT,
+      ...seoSelect('page'),
+      site: { query: 'site', select: siteSeoSelect() },
+    },
   }
 })
+
+useCmsSeo(() => ({
+  page: data.value?.result,
+  site: data.value?.result?.site,
+  path: `/objects/${route.params.slug}`,
+  fallbackTitle: data.value?.result?.title,
+  fallbackDescription: data.value?.result?.baseline,
+}))
 
 // Map CMS slug → 3D component (same mapping as ResearchOverlay)
 const threeBySlug: Record<string, ReturnType<typeof defineAsyncComponent>> = {
@@ -175,12 +190,22 @@ const nextObject = computed(() => objectsOrder[(currentIndex.value + 1) % object
   scrollbar-width: thin;
   scrollbar-color: var(--app-color-primary) transparent;
 
-  // Mobile: full-width below the 3D viewer, no inner scroll (use body scroll instead)
+  // Mobile: full-width below the 3D viewer, no inner scroll (use body scroll instead).
+  // Larger bottom margin so the content clears the footer (matches AppLayoutColumns).
   @media (max-width: 768px) {
     margin-left: 0;
     height: auto;
     overflow-y: visible;
-    padding: 2rem var(--app-grid-gap);
+    padding: 2rem var(--app-grid-gap) 6rem;
+  }
+
+  // Desktop: content images are narrower than the column, centred.
+  @media (min-width: 769px) {
+    :deep(.block-image) {
+      max-width: 65%;
+      margin-left: auto;
+      margin-right: auto;
+    }
   }
 
   $fade: 4rem;

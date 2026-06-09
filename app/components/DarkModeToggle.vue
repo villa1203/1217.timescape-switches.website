@@ -17,10 +17,6 @@ const { isOn, toggle } = useTransparentMode()
 </script>
 
 <style scoped lang="scss">
-:root {
-    --pill-ratio:   93 / 46;  // same proportions as the original SVG asset
-}
-
 /* ── tweakables ─────────────────────────────────────────────── */
 $pill-width:   5rem;
 $border:       2px;
@@ -43,6 +39,11 @@ $glow-alpha:   0.65;
   bottom: 1.5rem;
   z-index: 150;
 
+  // Same proportions as the original SVG asset. Defined ON the element (not
+  // :root) — a scoped <style> rewrites `:root` to `:root[data-v-…]`, which never
+  // matches <html>, so the var was undefined → aspect-ratio invalid → height 0
+  // → the button was invisible.
+  --pill-ratio: 93 / 46;
   width: $pill-width;
   aspect-ratio: var(--pill-ratio);
   border-radius: 9999px;
@@ -71,10 +72,13 @@ $glow-alpha:   0.65;
   }
 
   // Mobile: anchored to the 3D viewer (its positioned ancestor, .viewer-section)
-  // instead of the viewport, so it sits at the bottom-right corner of the
-  // object itself. right/bottom stay 1.5rem — now measured from the viewer.
+  // instead of the viewport. Horizontally centered on the page (left offset by
+  // half the fixed pill width, so it stays centered without a transform that
+  // would clash with the :hover scale). bottom stays 1.5rem from the viewer.
   @media (max-width: 768px) {
     position: absolute;
+    right: auto;
+    left: calc(50% - #{$pill-width} / 2);
   }
 }
 

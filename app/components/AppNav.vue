@@ -20,7 +20,7 @@
             </div>
 
             <div>
-              <StickerButton text="Info" to="/info" :font_size="navFontSize" :active="isInfoPage" :flip="isDark" />
+              <StickerButton text="Info" @click="openInfo" :font_size="navFontSize" :active="isInfoPage" :flip="isDark" />
             </div>
           </div>
         </div>
@@ -41,6 +41,9 @@ import { useIsMobile } from '~/composables/useIsMobile'
 import { useDarkMode } from '~/composables/useDarkMode'
 
 const { text: shabbatText, isShabbat } = useShabbatCountdown()
+// `?shabbat` / `?dark` preview flag (set in app.vue) — lets us visualise the
+// full Shabbat state without waiting for the real weekly window.
+const previewDark = useState('previewDark', () => false)
 const { isDark } = useDarkMode()
 const { toggle: openResearch, isOpen } = useResearchOverlay()
 const { isMobile } = useIsMobile()
@@ -48,6 +51,12 @@ const navFontSize = computed(() => isMobile.value ? 18 : 24)
 const route = useRoute()
 const researchActive = computed(() => isOpen.value || route.path.startsWith('/research'))
 const isInfoPage = computed(() => route.path.startsWith('/info'))
+
+// Info: navigate directly. (The circles' swap animation that used to play before
+// navigating from the home has been removed.)
+function openInfo() {
+  navigateTo('/info')
+}
 let userLocation: { latitude: number; longitude: number; city?: string } | null = null
 
 /* ── Hide Research/Info on scroll-down, show on scroll-up ──
@@ -55,7 +64,13 @@ let userLocation: { latitude: number; longitude: number; city?: string } | null 
    columns' inner scroller on desktop, the body on mobile, the object page's
    right column…). A capture-phase scroll listener on window catches scroll
    events from any of them as they propagate down to their target. */
-const hiddenOnScroll = ref(false)
+// Shared so the footer can hide/show on scroll with the exact same signal.
+const hiddenOnScroll = useState('uiScrollHidden', () => false)
+// Shared "near the top of the page" flag — the footer uses it to stay hidden
+// while at the top. Defaults to true (pages load scrolled to the top).
+const atTop = useState('uiAtTop', () => true)
+// Shared "near the bottom of the page" flag — the footer reappears there.
+const atBottom = useState('uiAtBottom', () => false)
 let lastY = 0
 let lastTarget: EventTarget | null = null
 let scrollTicking = false
@@ -67,6 +82,17 @@ function scrollTopOf(target: EventTarget | null): number {
   return (target as HTMLElement).scrollTop ?? 0
 }
 
+// Visible viewport height and total scrollable height of the scrolling element,
+// so we can tell when it's scrolled to the bottom.
+function scrollSizeOf(target: EventTarget | null): { ch: number; sh: number } {
+  if (!target || target === document || target === window) {
+    const el = document.scrollingElement || document.documentElement
+    return { ch: window.innerHeight, sh: el?.scrollHeight ?? 0 }
+  }
+  const el = target as HTMLElement
+  return { ch: el.clientHeight, sh: el.scrollHeight }
+}
+
 function onScrollCapture(e: Event) {
   if (scrollTicking) return
   scrollTicking = true
@@ -74,6 +100,11 @@ function onScrollCapture(e: Event) {
   requestAnimationFrame(() => {
     scrollTicking = false
     const y = scrollTopOf(target)
+    // Within the top offset → "at top" (footer stays hidden there).
+    atTop.value = y <= 80
+    // Within the bottom offset → "at bottom" (footer reappears there).
+    const { ch, sh } = scrollSizeOf(target)
+    atBottom.value = sh - (y + ch) <= 80
     // Reset the baseline when the scrolling element changes (e.g. navigation).
     if (target !== lastTarget) {
       lastTarget = target
@@ -91,6 +122,13 @@ function onScrollCapture(e: Event) {
 // Fetch Shabbat countdown on mount
 onMounted(async () => {
   window.addEventListener('scroll', onScrollCapture, { capture: true, passive: true })
+
+  // Preview (?shabbat): simulate the active Shabbat state and skip the geo +
+  // API calls entirely.
+  if (previewDark.value) {
+    await updateShabbatCountdown()
+    return
+  }
 
   // Get user's location first
   await getUserLocation()
@@ -195,6 +233,14 @@ async function getUserLocation() {
 }
 
 async function updateShabbatCountdown() {
+  // Preview mode: force the active-Shabbat state (dark + "ends in…" nav text)
+  // so the weekly-timescape look can be reviewed on demand via ?shabbat.
+  if (previewDark.value) {
+    isShabbat.value = true
+    shabbatText.value = 'Weekly Timescape\nends in 12 hours, 34 minutes'
+    return
+  }
+
   if (!userLocation) return
 
   try {
@@ -328,11 +374,14 @@ async function updateShabbatCountdown() {
   }
 }
 
-// Hidden while scrolling down (all viewports); slides back in on scroll up.
+// Hidden while scrolling down, slides back in on scroll up — mobile only.
+// On desktop the Research/Info buttons stay put while scrolling.
 .nav-right--scroll-hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-0.5rem);
+  @media (max-width: 768px) {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-0.5rem);
+  }
 }
 
 // Shabbat: the navigation is dimmed and not interactive (the site stays on the

@@ -227,4 +227,12 @@ watch(sequenced, () => {
     transform: none !important;
   }
 }
+
+// Mobile: the columns stack, so the last one sits at the very bottom of the
+// page. Give it more breathing room before the footer.
+@media (max-width: 768px) {
+  .v-app-layout-columns__col:last-child .v-app-layout-columns__inner {
+    padding-bottom: 6rem;
+  }
+}
 </style>

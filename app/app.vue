@@ -2,7 +2,7 @@
   <div class="v-app" :class="{ 'v-app--home': isHome, 'v-app--dark': isDark }"
   >
 
-    <div class="v-app__header app-grid">
+    <div class="v-app__header app-grid" :class="{ 'is-revealed': loaderDone }">
       <AppNav/>
     </div>
 
@@ -13,11 +13,13 @@
         }" />
     </main>
 
-    <div class="v-app__footer app-grid">
+    <div class="v-app__footer app-grid" :class="{ 'is-revealed': loaderDone, 'v-app__footer--scroll-hidden': footerHidden }">
       <AppFooter/>
     </div>
 
     <ResearchOverlay />
+
+    <AppLoader />
   </div>
 </template>
 
@@ -25,10 +27,29 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
 import { useShabbatCountdown } from '~/composables/useShabbatCountdown'
+import { useAppLoader } from '~/composables/useAppLoader'
+
+// Header/footer stay hidden until the initial loader finishes.
+const { loaderDone } = useAppLoader()
 
 const route = useRoute()
 // The header/footer fade gradient is shown everywhere except the home page.
 const isHome = computed(() => route.path === '/')
+
+// Shared scroll signals (set by AppNav): the footer (text + white gradient) is
+// hidden while scrolling down or while at the very top of the page, but always
+// shown at the very bottom — and always shown on the home page.
+const hiddenOnScroll = useState('uiScrollHidden', () => false)
+const atTop = useState('uiAtTop', () => true)
+const atBottom = useState('uiAtBottom', () => false)
+const footerHidden = computed(() =>
+  !isHome.value && !atBottom.value && (hiddenOnScroll.value || atTop.value),
+)
+
+// The loader only plays when arriving directly on the home. On any other entry
+// point (object/info pages…), skip it so the chrome shows immediately. Set in
+// setup (runs on SSR too) so the header/footer render already revealed there.
+if (route.path !== '/') loaderDone.value = true
 
 // Dark (black-background) mode is on during Shabbat. `?shabbat` (or `?dark`) in
 // the URL forces it on so the look can be previewed outside of Shabbat. The
@@ -57,6 +78,11 @@ useHead({
 useRouter().afterEach(() => {
   if (import.meta.client) {
     document.body.classList.remove('v-block--is-visible')
+    // New pages load scrolled to the top: reset the footer scroll signals so it
+    // starts hidden (at top) rather than inheriting the previous page's state.
+    hiddenOnScroll.value = false
+    atTop.value = true
+    atBottom.value = false
   }
 })
 </script>
@@ -137,6 +163,12 @@ useRouter().afterEach(() => {
       );
       z-index: -1;
       pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    // Fade the gradient out together with the footer text on scroll down.
+    &.v-app__footer--scroll-hidden::before {
+      opacity: 0;
     }
   }
 }
@@ -147,6 +179,29 @@ useRouter().afterEach(() => {
   .v-app--home {
     .v-app__header { background: none; }
     .v-app__footer::before { display: none; }
+  }
+}
+
+// Initial reveal: header slides down from the top, footer up from the bottom,
+// once the loader's blob exit has finished (.is-revealed added in app.vue).
+.v-app__header,
+.v-app__footer {
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s ease;
+}
+.v-app__header:not(.is-revealed) {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+.v-app__footer:not(.is-revealed) {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .v-app__header,
+  .v-app__footer {
+    transition: none;
   }
 }
 

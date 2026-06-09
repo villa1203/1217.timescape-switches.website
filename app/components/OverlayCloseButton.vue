@@ -92,6 +92,9 @@ const isHovered = ref(false)
   &--open {
     opacity: 1;
     pointer-events: auto;
+    // Fades in with the overlay. `--reveal-delay` (set by the parent on the home)
+    // holds it back while the circles erase, matching the panel.
+    transition: opacity 0.3s ease var(--reveal-delay, 0s), transform 0.2s ease;
   }
 
   &:hover {

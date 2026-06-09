@@ -12,7 +12,7 @@
 			<h2 class="h2 purple"><StickerParagraph :text="block_data.content.title" /></h2>
 		</header>
 		<ObjectImage
-		  :src="block_data.content.image.large.url"
+		  :image="block_data.content.image"
 		  :alt="block_data.content.image.alt || 'image'"
 		  :caption="captionHtml"
 		/>

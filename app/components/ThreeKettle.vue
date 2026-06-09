@@ -50,6 +50,7 @@ const CAMERA_DISTANCE = 1.2  // × modelSize — decrease to start closer, incre
 
 /* ─────────────────────────── refs & state ─────────────────────────── */
 const canvasRef = ref(null)
+let resizeObserver = null
 const loading = ref(true)
 
 /* ─────────────────────────── three.js state ───────────────────────── */
@@ -57,6 +58,7 @@ let THREE, GLTFLoader, camera, renderer, model, animId, canvas
 let renderTarget1, renderTarget2
 let normalScene, xrayScene, compositingMesh, orthoCamera, orthoScene
 let isDragging = false, lastMouse = { x: 0, y: 0 }
+let pointerInside = false  // cursor over the canvas → feed the x-ray reveal
 let rotVel = { x: 0, y: 0 }, autoRotate = true, autoRotateTimer = null
 let spherical = { theta: 0, phi: Math.PI / 2, radius: 5 }
 let modelSize = 1, minZoom = 0.5, maxZoom = 2
@@ -380,10 +382,15 @@ async function init() {
 
   /* Event listeners */
   window.addEventListener('resize', onResize)
+  // React to container size changes too (overlay open, layout settling); the
+  // window 'resize' alone misses these, leaving camera.aspect wrong → squashed.
+  resizeObserver = new ResizeObserver(() => onResize())
+  resizeObserver.observe(canvas)
   canvas.addEventListener('mousedown', onMouseDown)
   canvas.addEventListener('mousemove', onMouseMove)
   canvas.addEventListener('mouseup', onMouseUp)
-  canvas.addEventListener('mouseleave', onMouseUp)
+  canvas.addEventListener('mouseenter', onMouseEnter)
+  canvas.addEventListener('mouseleave', onMouseLeave)
   canvas.addEventListener('wheel', onWheel, { passive: false })
   canvas.addEventListener('touchstart', onTouchStart, { passive: false })
   canvas.addEventListener('touchmove', onTouchMove, { passive: false })
@@ -428,12 +435,18 @@ function updateFluidSimulation() {
   fluidCtx.fillStyle = 'rgba(0, 0, 0, 0.08)'
   fluidCtx.fillRect(0, 0, fluidCanvas.width, fluidCanvas.height)
 
-  fluidTrail.push({ x: mousePos.x, y: mousePos.y })
-  if (fluidTrail.length > maxTrailLength) fluidTrail.shift()
+  // Only feed the trail while hovering; otherwise drain it so the reveal fades
+  // out and disappears when there's no hover.
+  if (pointerInside) {
+    fluidTrail.push({ x: mousePos.x, y: mousePos.y })
+    if (fluidTrail.length > maxTrailLength) fluidTrail.shift()
+  } else if (fluidTrail.length > 0) {
+    fluidTrail.shift()
+  }
 
   fluidTrail.forEach((point, i) => {
     const progress = i / maxTrailLength
-    const baseSize = progress * 35 + 12
+    const baseSize = progress * 70 + 26
     const alpha = progress
     const time = animTime
 
@@ -532,6 +545,7 @@ function animate() {
     || Math.abs(rotVel.x) > 0.001
     || Math.abs(rotVel.y) > 0.001
     || fluidDecayFrames > 0
+    || fluidTrail.length > 0
   if (needsLoop) requestRender()
 }
 
@@ -541,6 +555,7 @@ function onResize() {
   if (!resizeCanvas) return
   const W = resizeCanvas.clientWidth
   const H = resizeCanvas.clientHeight
+  if (!W || !H) return
   camera.aspect = W / H
   camera.updateProjectionMatrix()
   renderer.setSize(W, H, false)
@@ -582,6 +597,7 @@ function onMouseDown(e) {
 
 function onMouseMove(e) {
   fluidDecayFrames = 40
+  pointerInside = true
   requestRender()
   if (isDragging) {
     const dx = e.clientX - lastMouse.x
@@ -602,6 +618,20 @@ function onMouseMove(e) {
 function onMouseUp() {
   isDragging = false
   autoRotateTimer = setTimeout(() => { autoRotate = true; requestRender() }, 2500)
+}
+
+function onMouseEnter() {
+  pointerInside = true
+  fluidDecayFrames = 40
+  requestRender()
+}
+
+function onMouseLeave() {
+  pointerInside = false
+  onMouseUp()
+  // Keep the loop alive briefly so the trail drains and the reveal fades out.
+  fluidDecayFrames = 60
+  requestRender()
 }
 
 function onWheel(e) {
@@ -656,6 +686,7 @@ onMounted(() => { init() })
 
 onUnmounted(() => {
   cancelAnimationFrame(animId)
+  resizeObserver?.disconnect()
   window.removeEventListener('resize', onResize)
   if (renderer) {
     renderer.dispose()

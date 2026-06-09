@@ -9,7 +9,11 @@
 			<img v-for="image of block_data.content.images"
            class="app-grid__col-6"
            :src="image.large.url"
+           :srcset="buildSrcset(image) || undefined"
+           sizes="(max-width: 768px) 46vw, 25vw"
            :alt="image.alt || 'image'"
+           loading="lazy"
+           decoding="async"
       >
 
     </div>
@@ -19,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import type {CMS_BlockGalleryData} from "#shared/cms_api"
+import {buildSrcset, type CMS_BlockGalleryData} from "#shared/cms_api"
 
 defineProps<{
   block_data: CMS_BlockGalleryData

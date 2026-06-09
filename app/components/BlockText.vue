@@ -87,6 +87,9 @@ const stickerParagraphs = computed(() => {
 }
 
 .block-text__body {
+  // Paragraph alinéa — also used to align bullet-list text. Keep both in sync.
+  --block-text-indent: 2rem;
+
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -99,8 +102,15 @@ const stickerParagraphs = computed(() => {
    the CMS writer. Empty paragraphs (blank lines) also get a line box so an
    extra blank line in the writer shows as extra space on the front. */
 .block-text__body :deep(p) {
-  text-indent: 2rem;
+  text-indent: var(--block-text-indent);
   margin: 0 0 1rem;
+}
+
+/* No indent on the first paragraph of the text, nor on a paragraph that comes
+   right after a heading — the indent only marks continuation paragraphs. */
+.block-text__body :deep(p:first-child),
+.block-text__body :deep(:is(h1, h2, h3, h4, h5, h6) + p) {
+  text-indent: 0;
 }
 
 .block-text__body :deep(p:empty)::before {
@@ -110,12 +120,35 @@ const stickerParagraphs = computed(() => {
 .block-text__body :deep(ul),
 .block-text__body :deep(ol) {
   margin: 0 0 1rem;
-  padding-left: 1.5rem;
+  padding-left: 0;
+  list-style: none;
 }
 
-/* Bullet lines stay tight: no gap between list items or their inner text. */
+/* Bullet lines stay tight: no gap between list items or their inner text.
+   The marker sits flush against the left margin and the text is pushed to the
+   paragraph alinéa, so list text lines up with indented prose. */
 .block-text__body :deep(li) {
+  position: relative;
   margin: 0;
+  padding-left: var(--block-text-indent);
+}
+
+.block-text__body :deep(ul > li)::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+}
+
+/* Ordered lists keep their numbering, also flush-left with text at the alinéa. */
+.block-text__body :deep(ol) {
+  counter-reset: ol-counter;
+}
+
+.block-text__body :deep(ol > li)::before {
+  counter-increment: ol-counter;
+  content: counter(ol-counter) ".";
+  position: absolute;
+  left: 0;
 }
 
 .block-text__body :deep(li p) {

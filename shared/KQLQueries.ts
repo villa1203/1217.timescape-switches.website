@@ -128,6 +128,41 @@ export const KQL_SELECT_IMAGE = {
   focus: "file.focus",
 }
 
+// ── SEO ─────────────────────────────────────────────────────────────────────
+// Per-page SEO fields (blueprint tabs/seo.yml). `model` is the KQL context the
+// select runs against: 'page' for page queries, 'site' for the site object.
+// Toggles come back as raw "true"/"false"/"" strings — the front (useCmsSeo)
+// treats anything but "false" as on, so unset = indexed by default.
+export const seoSelect = (model: 'page' | 'site' = 'page') => ({
+  seo_title: true,
+  seo_description: true,
+  og_title: true,
+  og_description: true,
+  og_image: {
+    query: `${model}.og_image.toFile`,
+    select: { url: true },
+  },
+  seo_index: true,
+  seo_follow: true,
+  seo_index_images: true,
+})
+
+// Site-wide SEO globals + defaults (blueprint site.yml SEO tab). Used as the
+// home's own SEO and as fallbacks for every page.
+export const siteSeoSelect = () => ({
+  site_title: true,
+  seo_description: true,
+  og_description: true,
+  og_image: {
+    query: 'site.og_image.toFile',
+    select: { url: true },
+  },
+  // Home indexation lives on the site object.
+  seo_index: true,
+  seo_follow: true,
+  seo_index_images: true,
+})
+
 export const KQL_PROJECTS_SELECT = {
   title: true,
   slug: true,

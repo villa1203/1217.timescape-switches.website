@@ -34,6 +34,9 @@ export default defineNuxtConfig({
     secret_API_AUTH_PASSWORD: process.env.API_AUTH_PASSWORD,
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE,
+      // Public URL of this front-end — used for canonical links, Open Graph URLs
+      // and the sitemap / robots.txt. No trailing slash.
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL,
     },
   },
 
