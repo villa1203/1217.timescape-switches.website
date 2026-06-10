@@ -24,37 +24,119 @@ const sw = computed(() => props.stroke_width ?? 1.5)
 // Unique id suffix so multiple instances don't share <defs> (clip/filter).
 const uid = useId()
 
-// Rotating gap: each dotted outline keeps its dots over ~80% of its length and
-// has one ~20% empty arc. We build the dash pattern per shape from its real
-// perimeter (so dot size stays consistent across circles/ellipses and the
-// pattern sums to the length → no repeat), then animate stroke-dashoffset
-// elsewhere to send that empty arc travelling around. `--len` (the perimeter)
-// is exposed so the CSS keyframe can offset by exactly one full loop.
+// Dot style: near-zero dash + round linecap = circular dot (same as globe).
 const shapesRef = ref<SVGGElement | null>(null)
-const DOT = 10           // dash length (matches the previous "10 10" look)
-const GAP = 10           // gap between dots
-const EMPTY_RATIO = 0.025  // share of the ring left empty (the rotating hole)
+const DOT = 0.1
+const GAP = 9.9
+const EMPTY_RATIO = 0
 
-onMounted(() => {
+// ── Pulse constants ───────────────────────────────────────────────────────
+// Each pulse is fully random: accel duration, decel duration, peak rate and
+// dash length. progress goes 0 → 1 (accel) then immediately 1 → 0 (decel) —
+// no hold at peak.
+const MAX_RATE    = 5      // peak playback rate cap
+const MAX_DASH    = 4      // peak dash length cap
+const DUR_MIN     = 3000   // shortest accel or decel (ms)
+const DUR_MAX     = 8000   // longest accel or decel (ms)
+const DUR_JITTER  = 0.25   // each side can deviate ±25% from the shared base
+const REST_MIN    = 6000   // rest between pulses (ms)
+const REST_MAX    = 22000
+
+// Store per-element computed dasharray so it restores perfectly after the pulse.
+const baseDA = new Map<SVGGeometryElement, string>()
+
+let pulseTimer: ReturnType<typeof setTimeout> | null = null
+let pulseRafId = 0
+let isPulsing  = false
+
+function scheduleNextPulse() {
+  const delay = REST_MIN + Math.random() * (REST_MAX - REST_MIN)
+  pulseTimer = setTimeout(triggerPulse, delay)
+}
+
+function triggerPulse() {
+  if (isPulsing) return
   const group = shapesRef.value
   if (!group) return
-  for (const el of Array.from(group.children) as SVGGeometryElement[]) {
-    if (typeof el.getTotalLength !== 'function') continue
-    const len = el.getTotalLength()
-    // Number of dotted periods that fill the non-empty part of the ring.
-    const n = Math.max(2, Math.round(((1 - EMPTY_RATIO) * len + DOT) / (DOT + GAP)))
-    // The one big gap absorbs the remainder so the whole pattern equals `len`.
-    const hole = Math.max(DOT, len - ((n - 1) * (DOT + GAP) + DOT))
-    const dash = `${Array(n - 1).fill(`${DOT} ${GAP}`).join(' ')} ${DOT} ${hole}`
-    el.style.strokeDasharray = dash
-    el.style.setProperty('--len', String(len))
+  isPulsing = true
+
+  // Each pulse is unique — random timing and intensity within caps.
+  const peakRate = 1.5 + Math.random() * (MAX_RATE - 1.5)
+  const dashMax  = 0.5 + Math.random() * (MAX_DASH - 0.5)
+  const baseDur  = DUR_MIN + Math.random() * (DUR_MAX - DUR_MIN)
+  const accelMs  = Math.min(DUR_MAX, baseDur * (1 + (Math.random() * 2 - 1) * DUR_JITTER))
+  const decelMs  = Math.min(DUR_MAX, baseDur * (1 + (Math.random() * 2 - 1) * DUR_JITTER))
+
+  const shapes = Array.from(group.querySelectorAll('ellipse, circle')) as SVGGeometryElement[]
+  const swVal  = sw.value
+  const start  = performance.now()
+
+  const tick = () => {
+    const elapsed = performance.now() - start
+    let progress: number
+
+    if (elapsed < accelMs) {
+      const t = elapsed / accelMs
+      progress = t * t * t
+    } else if (elapsed < accelMs + decelMs) {
+      const t = (elapsed - accelMs) / decelMs
+      progress = (1 - t) * (1 - t)
+    } else {
+      progress = 0
+    }
+
+    const dash = DOT + progress * (dashMax - DOT)
+    const gap  = GAP - progress * (GAP - (10 - dashMax))
+    const rate = 1 + progress * (peakRate - 1)
+    const w    = swVal * (1 + progress * 0.2)
+
+    shapes.forEach(el => {
+      el.style.strokeDasharray = `${dash.toFixed(2)} ${gap.toFixed(2)}`
+      el.style.strokeWidth     = w.toFixed(2)
+      el.getAnimations().forEach(a => { a.playbackRate = rate })
+    })
+
+    if (elapsed < accelMs + decelMs) {
+      pulseRafId = requestAnimationFrame(tick)
+    } else {
+      shapes.forEach(el => {
+        el.style.strokeDasharray = baseDA.get(el) ?? ''
+        el.style.strokeWidth     = ''
+        el.getAnimations().forEach(a => { a.playbackRate = 1 })
+      })
+      isPulsing = false
+      scheduleNextPulse()
+    }
   }
+
+  pulseRafId = requestAnimationFrame(tick)
+}
+
+onMounted(() => {
+  // Compute per-shape dasharray so dots fill each ring perfectly
+  const group = shapesRef.value
+  if (group) {
+    for (const el of Array.from(group.querySelectorAll('ellipse, circle')) as SVGGeometryElement[]) {
+      const len = el.getTotalLength()
+      const n = Math.max(2, Math.round(((1 - EMPTY_RATIO) * len + DOT) / (DOT + GAP)))
+      const hole = Math.max(DOT, len - ((n - 1) * (DOT + GAP) + DOT))
+      const dash = `${Array(n - 1).fill(`${DOT} ${GAP}`).join(' ')} ${DOT} ${hole}`
+      el.style.strokeDasharray = dash
+      el.style.setProperty('--len', String(len))
+      baseDA.set(el, dash)
+    }
+  }
+
+  scheduleNextPulse()
+})
+
+onUnmounted(() => {
+  if (pulseTimer) clearTimeout(pulseTimer)
+  cancelAnimationFrame(pulseRafId)
 })
 
 // `--order`: draw order from the outside in — outermost shapes (0 & 4) first,
-// then the inner pair (1 & 3), then the centre (2). The trace always starts at
-// each shape's path origin (the side facing the composition centre — 3 o'clock
-// for the left shapes, and 9 o'clock for the right ones since they're mirrored).
+// then the inner pair (1 & 3), then the centre (2).
 const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
 </script>
 
@@ -67,8 +149,6 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
     preserveAspectRatio="xMidYMid meet"
   >
     <defs>
-      <!-- Découpe : l'union des 5 formes. Sert à n'afficher le sketch (et le
-           grain) qu'À L'INTÉRIEUR des cercles. -->
       <clipPath :id="`dc-clip-${uid}`">
         <ellipse cx="146"  cy="356" rx="145.5" ry="355.5" />
         <circle  cx="423"  cy="357" r="355" />
@@ -77,9 +157,6 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
         <ellipse cx="1419" cy="356" rx="145.5" ry="355.5" />
       </clipPath>
 
-      <!-- Draw-on mask: solid white copies of the shapes, each "traced" via
-           stroke-dashoffset (pathLength normalised to 1). As each stroke draws
-           on, it progressively reveals the dotted outline underneath. -->
       <mask
         v-if="draw"
         :id="`dc-draw-${uid}`"
@@ -101,11 +178,8 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
           <ellipse cx="1419" cy="356" rx="145.5" ry="355.5" pathLength="1" class="dc-draw-rev" :style="maskVars(4)" />
         </g>
       </mask>
-
     </defs>
 
-    <!-- Le sketch P5 vit dans le SVG (même repère que les cercles) et n'est
-         visible qu'à l'intérieur des formes grâce au clip. -->
     <foreignObject
       v-if="sketch"
       x="0" y="0" width="1565" height="713"
@@ -116,47 +190,25 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
       </div>
     </foreignObject>
 
-    <!-- Contours pointillés animés, au-dessus de tout. -->
     <g ref="shapesRef" class="dc-shapes" fill="none" :mask="draw ? `url(#dc-draw-${uid})` : undefined">
-      <!-- Ellipse gauche -->
       <ellipse
         cx="146" cy="356" rx="145.5" ry="355.5"
-        :stroke="color || 'black'"
+        class="dc-spin-left"
+        :stroke="color || 'white'"
         :stroke-width="sw"
         stroke-linecap="round"
-        stroke-dasharray="10 10"
+        stroke-dasharray="0.1 9.9"
       />
-      <!-- Cercle gauche -->
-      <circle
-        cx="423" cy="357" r="355"
-        :stroke="color || 'black'"
-        :stroke-width="sw"
-        stroke-linecap="round"
-        stroke-dasharray="10 10"
-      />
-      <!-- Cercle centre -->
-      <circle
-        cx="781" cy="357" r="355"
-        :stroke="color || 'black'"
-        :stroke-width="sw"
-        stroke-linecap="round"
-        stroke-dasharray="10 10"
-      />
-      <!-- Cercle droit -->
-      <circle
-        cx="1138" cy="357" r="355"
-        :stroke="color || 'black'"
-        :stroke-width="sw"
-        stroke-linecap="round"
-        stroke-dasharray="10 10"
-      />
-      <!-- Ellipse droite -->
+      <circle cx="423"  cy="357" r="355" :stroke="color || 'white'" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
+      <circle cx="781"  cy="357" r="355" :stroke="color || 'white'" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
+      <circle cx="1138" cy="357" r="355" :stroke="color || 'white'" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
       <ellipse
         cx="1419" cy="356" rx="145.5" ry="355.5"
-        :stroke="color || 'black'"
+        class="dc-spin-right"
+        :stroke="color || 'white'"
         :stroke-width="sw"
         stroke-linecap="round"
-        stroke-dasharray="10 10"
+        stroke-dasharray="0.1 9.9"
       />
     </g>
   </svg>
@@ -166,8 +218,6 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
 .dotted-circles {
   width: 100%;
   height: auto;
-  /* Effet "différence" : tout l'ensemble des cercles (sketch + grain + contours)
-     se fond en différence avec ce qu'il y a derrière (fond de page). */
   mix-blend-mode: difference;
 }
 
@@ -176,83 +226,49 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
   height: 100%;
 }
 
-/* Trace timing (tweak here to speed up / slow down the draw + erase). */
+/* ── Draw-on mask ─────────────────────────────────────────────────────── */
 .dc-draw-strokes {
-  --dc-draw-dur: 1.5s;   /* per-shape draw/erase duration */
-  --dc-draw-step: 0.3s;  /* stagger between the 3 rings */
+  --dc-draw-dur: 1.5s;
+  --dc-draw-step: 0.3s;
 }
-
-/* pathLength is normalised to 1, so the drawn arc grows from 0 to the full
-   circumference (dasharray 0 1 → 1 0), starting from each shape's path origin
-   (the centre-facing side). Hidden by default. */
-.dc-draw-strokes > * {
-  stroke-dasharray: 0 1;
-}
-
-/* The two rightmost shapes trace the other way round: mirroring horizontally
-   reverses the path winding (invisible — both shapes are symmetric). */
+.dc-draw-strokes > * { stroke-dasharray: 0 1; }
 .dc-draw-strokes > .dc-draw-rev {
   transform-box: fill-box;
   transform-origin: center;
   transform: scaleX(-1);
 }
-
-/* Static fully-drawn state (e.g. the home circles on initial load — the loader
-   already played the draw). */
-.dc-draw-strokes.is-shown > * {
-  stroke-dasharray: 1 0;
-}
-
-/* Draw on — staggered from the outside in. `both` fill so a shape holds its
-   start (hidden) state during its stagger delay and its end (drawn) state after. */
+.dc-draw-strokes.is-shown > * { stroke-dasharray: 1 0; }
 .dc-draw-strokes.is-in > * {
   animation: dc-draw-on var(--dc-draw-dur) ease both;
   animation-delay: calc(var(--order, 0) * var(--dc-draw-step));
 }
-
-/* Erase (reverse trace) — staggered from the inside out (the inverse order).
-   `both` fill keeps not-yet-started shapes fully drawn until their turn. */
 .dc-draw-strokes.is-out > * {
   animation: dc-draw-off var(--dc-draw-dur) ease both;
   animation-delay: calc((2 - var(--order, 0)) * var(--dc-draw-step));
 }
-
-@keyframes dc-draw-on {
-  from { stroke-dasharray: 0 1; }
-  to   { stroke-dasharray: 1 0; }
-}
-
-@keyframes dc-draw-off {
-  from { stroke-dasharray: 1 0; }
-  to   { stroke-dasharray: 0 1; }
-}
-
+@keyframes dc-draw-on  { from { stroke-dasharray: 0 1; } to { stroke-dasharray: 1 0; } }
+@keyframes dc-draw-off { from { stroke-dasharray: 1 0; } to { stroke-dasharray: 0 1; } }
 @media (prefers-reduced-motion: reduce) {
-  /* No tracing — jump straight to the target state. */
   .dc-draw-strokes.is-in > *,
   .dc-draw-strokes.is-shown > * { stroke-dasharray: 1 0; animation: none; }
   .dc-draw-strokes.is-out > *   { stroke-dasharray: 0 1; animation: none; }
 }
 
-/* Rotating gap: offsetting the dash pattern by exactly one perimeter (`--len`,
-   set per shape in JS) sends the single empty arc travelling around the ring,
-   seamlessly looping. Dots stay put relative to the moving hole. */
-.dc-shapes > * {
-  animation: dc-gap-spin var(--gap-dur, 16s) linear infinite;
+/* ── Rotating dots ────────────────────────────────────────────────────── */
+.dc-shapes ellipse,
+.dc-shapes > circle {
+  animation: dc-gap-spin var(--gap-dur, 32s) linear infinite;
 }
+@keyframes dc-gap-spin { to { stroke-dashoffset: var(--len, 0); } }
 
-@keyframes dc-gap-spin {
-  to { stroke-dashoffset: var(--len, 0); }
-}
-
-/* Varied speeds + directions so the holes don't move in lockstep. */
-.dc-shapes ellipse:nth-child(1) { --gap-dur: 15s; }
-.dc-shapes circle:nth-child(2)  { --gap-dur: 18s; animation-direction: reverse; }
-.dc-shapes circle:nth-child(3)  { --gap-dur: 16s; }
-.dc-shapes circle:nth-child(4)  { --gap-dur: 20s; animation-direction: reverse; }
-.dc-shapes ellipse:nth-child(5) { --gap-dur: 14s; }
+.dc-spin-left                    { --gap-dur: 30s; }
+.dc-shapes > circle:nth-child(2) { --gap-dur: 36s; animation-direction: reverse; }
+.dc-shapes > circle:nth-child(3) { --gap-dur: 32s; }
+.dc-shapes > circle:nth-child(4) { --gap-dur: 40s; animation-direction: reverse; }
+.dc-spin-right                   { --gap-dur: 28s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .dc-shapes > * { animation: none; }
+  .dc-shapes ellipse,
+  .dc-shapes > circle { animation: none; }
 }
 </style>
