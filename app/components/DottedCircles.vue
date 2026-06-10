@@ -24,6 +24,33 @@ const sw = computed(() => props.stroke_width ?? 1.5)
 // Unique id suffix so multiple instances don't share <defs> (clip/filter).
 const uid = useId()
 
+// Rotating gap: each dotted outline keeps its dots over ~80% of its length and
+// has one ~20% empty arc. We build the dash pattern per shape from its real
+// perimeter (so dot size stays consistent across circles/ellipses and the
+// pattern sums to the length → no repeat), then animate stroke-dashoffset
+// elsewhere to send that empty arc travelling around. `--len` (the perimeter)
+// is exposed so the CSS keyframe can offset by exactly one full loop.
+const shapesRef = ref<SVGGElement | null>(null)
+const DOT = 10           // dash length (matches the previous "10 10" look)
+const GAP = 10           // gap between dots
+const EMPTY_RATIO = 0.025  // share of the ring left empty (the rotating hole)
+
+onMounted(() => {
+  const group = shapesRef.value
+  if (!group) return
+  for (const el of Array.from(group.children) as SVGGeometryElement[]) {
+    if (typeof el.getTotalLength !== 'function') continue
+    const len = el.getTotalLength()
+    // Number of dotted periods that fill the non-empty part of the ring.
+    const n = Math.max(2, Math.round(((1 - EMPTY_RATIO) * len + DOT) / (DOT + GAP)))
+    // The one big gap absorbs the remainder so the whole pattern equals `len`.
+    const hole = Math.max(DOT, len - ((n - 1) * (DOT + GAP) + DOT))
+    const dash = `${Array(n - 1).fill(`${DOT} ${GAP}`).join(' ')} ${DOT} ${hole}`
+    el.style.strokeDasharray = dash
+    el.style.setProperty('--len', String(len))
+  }
+})
+
 // `--order`: draw order from the outside in — outermost shapes (0 & 4) first,
 // then the inner pair (1 & 3), then the centre (2). The trace always starts at
 // each shape's path origin (the side facing the composition centre — 3 o'clock
@@ -90,7 +117,7 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
     </foreignObject>
 
     <!-- Contours pointillés animés, au-dessus de tout. -->
-    <g class="dc-shapes" fill="none" :mask="draw ? `url(#dc-draw-${uid})` : undefined">
+    <g ref="shapesRef" class="dc-shapes" fill="none" :mask="draw ? `url(#dc-draw-${uid})` : undefined">
       <!-- Ellipse gauche -->
       <ellipse
         cx="146" cy="356" rx="145.5" ry="355.5"
@@ -207,41 +234,25 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
   .dc-draw-strokes.is-out > *   { stroke-dasharray: 0 1; animation: none; }
 }
 
-/* Contours pointillés : rotation continue du pointillé (inchangée). */
-.dc-shapes circle,
-.dc-shapes ellipse {
-  animation: rotate-dots 35s linear infinite;
+/* Rotating gap: offsetting the dash pattern by exactly one perimeter (`--len`,
+   set per shape in JS) sends the single empty arc travelling around the ring,
+   seamlessly looping. Dots stay put relative to the moving hole. */
+.dc-shapes > * {
+  animation: dc-gap-spin var(--gap-dur, 16s) linear infinite;
 }
 
-.dc-shapes circle:nth-child(2) {
-  animation-duration: 45s;
-  animation-direction: reverse;
+@keyframes dc-gap-spin {
+  to { stroke-dashoffset: var(--len, 0); }
 }
 
-.dc-shapes circle:nth-child(3) {
-  animation-duration: 55s;
-}
+/* Varied speeds + directions so the holes don't move in lockstep. */
+.dc-shapes ellipse:nth-child(1) { --gap-dur: 15s; }
+.dc-shapes circle:nth-child(2)  { --gap-dur: 18s; animation-direction: reverse; }
+.dc-shapes circle:nth-child(3)  { --gap-dur: 16s; }
+.dc-shapes circle:nth-child(4)  { --gap-dur: 20s; animation-direction: reverse; }
+.dc-shapes ellipse:nth-child(5) { --gap-dur: 14s; }
 
-.dc-shapes circle:nth-child(4) {
-  animation-duration: 40s;
-  animation-direction: reverse;
-}
-
-.dc-shapes ellipse:nth-child(1) {
-  animation-duration: 30s;
-}
-
-.dc-shapes ellipse:nth-child(5) {
-  animation-duration: 30s;
-  animation-direction: reverse;
-}
-
-@keyframes rotate-dots {
-  from {
-    stroke-dashoffset: 0;
-  }
-  to {
-    stroke-dashoffset: 100;
-  }
+@media (prefers-reduced-motion: reduce) {
+  .dc-shapes > * { animation: none; }
 }
 </style>
