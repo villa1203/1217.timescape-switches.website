@@ -378,6 +378,16 @@ onUnmounted(() => {
   // horizontal padding below is what keeps the stickers' blob outline (which
   // overflows left/right of the text) from being cut at the column edges.
   overflow-y: auto;
+  // Purple scrollbar — same params as the other pages (AppLayoutColumns / object page).
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-color-primary) transparent;
+
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: var(--app-color-primary);
+    border-radius: 4px;
+  }
   // Push the centered list block down a bit — reduces the available space
   // at the top of the flex container.
   padding-top: 6rem;
