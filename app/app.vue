@@ -59,7 +59,7 @@ const previewDark = useState('previewDark', () => false)
 onMounted(() => {
   if ('shabbat' in route.query || 'dark' in route.query) previewDark.value = true
 })
-const isDark = computed(() => isShabbat.value || previewDark.value)
+const isDark = computed(() => isShabbat.value)
 
 // Shabbat: only the home is accessible. If Shabbat turns on while the user is
 // on another page, send them home (navigation between pages is handled by the

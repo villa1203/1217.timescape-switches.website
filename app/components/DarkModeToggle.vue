@@ -1,7 +1,7 @@
 <template>
   <button
     class="sticker-toggle"
-    :class="{ 'is-on': isOn }"
+    :class="{ 'is-on': isOn, 'sticker-toggle--inline': inline }"
     :aria-pressed="isOn"
     aria-label="Toggle transparent 3D"
     @click="toggle"
@@ -13,7 +13,29 @@
 <script setup lang="ts">
 import { useTransparentMode } from '~/composables/useTransparentMode'
 
-const { isOn, toggle } = useTransparentMode()
+const props = withDefaults(defineProps<{
+  modelValue?: boolean  // controlled mode — when provided, isOn uses this
+  inline?: boolean      // removes fixed viewport positioning (for footer use)
+}>(), {
+  modelValue: undefined,
+  inline: false,
+})
+
+const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
+
+const { isOn: transparentOn, toggle: transparentToggle } = useTransparentMode()
+
+const isOn = computed(() =>
+  props.modelValue !== undefined ? props.modelValue : transparentOn.value
+)
+
+function toggle() {
+  if (props.modelValue !== undefined) {
+    emit('update:modelValue', !props.modelValue)
+  } else {
+    transparentToggle()
+  }
+}
 </script>
 
 <style scoped lang="scss">
@@ -60,10 +82,31 @@ $glow-alpha:   0.65;
 
   transition:
     background-color $ease,
-    box-shadow       $ease,
-    transform        0.2s ease;
+    box-shadow       0.35s ease;
 
-  &:hover { transform: scale(1.05); }
+  &:hover {
+    box-shadow:
+      inset 0 0 $glow-pill rgba($color, $glow-alpha),
+      0 0 0 6px rgba($color, 0.12),
+      0 0 22px 10px rgba($color, 0.22);
+  }
+
+  &.is-on:hover {
+    box-shadow:
+      inset 0 0 $glow-pill rgba($bg, $glow-alpha),
+      0 0 0 6px rgba($color, 0.2),
+      0 0 22px 10px rgba($color, 0.38);
+  }
+
+  // Inline mode: let the parent control positioning (footer use case).
+  // `!important` beats the mobile @media rule below without extra selectors.
+  &.sticker-toggle--inline {
+    position: static !important;
+    right: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    z-index: auto;
+  }
 
   // ON state — invert colors (same idea as StickerParagraph `inverted`)
   &.is-on {

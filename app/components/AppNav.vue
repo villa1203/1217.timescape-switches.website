@@ -3,10 +3,10 @@
     >
       <div class="app-grid app-grid--justify-between">
         <div class="nav-left">
-          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :flip="isDark" />
+          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :flip="isShabbat" />
         </div>
 
-        <div :class="['nav-right', { 'nav-right--hidden': isOpen, 'nav-right--scroll-hidden': hiddenOnScroll, 'nav-right--locked': isDark }]">
+        <div :class="['nav-right', { 'nav-right--hidden': isOpen, 'nav-right--scroll-hidden': hiddenOnScroll, 'nav-right--locked': isShabbat }]">
           <div class="app-grid">
             <div>
               <StickerButton
@@ -15,12 +15,12 @@
                 :font_size="navFontSize"
                 color="var(--app-color-primary)"
                 :active="researchActive"
-                :flip="isDark"
+                :flip="isShabbat"
               />
             </div>
 
             <div>
-              <StickerButton text="Info" @click="openInfo" :font_size="navFontSize" :active="isInfoPage" :flip="isDark" />
+              <StickerButton text="Info" @click="openInfo" :font_size="navFontSize" :active="isInfoPage" :flip="isShabbat" />
             </div>
           </div>
         </div>
@@ -38,13 +38,10 @@
 import { useShabbatCountdown } from '~/composables/useShabbatCountdown'
 import { useResearchOverlay } from '~/composables/useResearchOverlay'
 import { useIsMobile } from '~/composables/useIsMobile'
-import { useDarkMode } from '~/composables/useDarkMode'
-
 const { text: shabbatText, isShabbat } = useShabbatCountdown()
 // `?shabbat` / `?dark` preview flag (set in app.vue) — lets us visualise the
 // full Shabbat state without waiting for the real weekly window.
 const previewDark = useState('previewDark', () => false)
-const { isDark } = useDarkMode()
 const { toggle: openResearch, isOpen } = useResearchOverlay()
 const { isMobile } = useIsMobile()
 const navFontSize = computed(() => isMobile.value ? 18 : 24)
@@ -233,14 +230,6 @@ async function getUserLocation() {
 }
 
 async function updateShabbatCountdown() {
-  // Preview mode: force the active-Shabbat state (dark + "ends in…" nav text)
-  // so the weekly-timescape look can be reviewed on demand via ?shabbat.
-  if (previewDark.value) {
-    isShabbat.value = true
-    shabbatText.value = 'Weekly Timescape\nends in 12 hours, 34 minutes'
-    return
-  }
-
   if (!userLocation) return
 
   try {
@@ -287,7 +276,6 @@ async function updateShabbatCountdown() {
 
       // If we're between candle lighting and havdalah, Shabbat is active
       if (now >= candleTime && now < havdalahTime) {
-        isShabbat.value = true   // → site switches to dark mode
         const timeDiff = havdalahTime.getTime() - now.getTime()
         const hours = Math.floor(timeDiff / (1000 * 60 * 60))
         const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))

@@ -6,20 +6,18 @@ import { useShabbatCountdown } from '~/composables/useShabbatCountdown'
 // `fillContainer`: size the canvas to the parent element (and position it
 // absolute, inset 0) instead of covering the whole window. Used when the sketch
 // is embedded inside another box — e.g. clipped to the circles in DottedCircles.
-const props = withDefaults(defineProps<{ fillContainer?: boolean }>(), {
+// `purple`: draw purple (#820FC1) lines instead of black/white.
+const props = withDefaults(defineProps<{ fillContainer?: boolean, purple?: boolean }>(), {
   fillContainer: false,
+  purple: false,
 })
 
 const containerRef = ref<HTMLDivElement | null>(null)
 let p5Instance: p5Type | null = null
 let ro: ResizeObserver | null = null
 
-// Dark (Shabbat) mode — mirrors app.vue. White lines on black instead of the
-// default black lines on white. `?shabbat`/`?dark` preview flag is shared via
-// the same `previewDark` state.
 const { isShabbat } = useShabbatCountdown()
-const previewDark = useState('previewDark', () => false)
-const isDark = computed(() => isShabbat.value || previewDark.value)
+const isDark = computed(() => isShabbat.value)
 
 onMounted(async () => {
   const p5 = (await import('p5')).default
@@ -40,7 +38,6 @@ onMounted(async () => {
       r = p.random(0.1, 1)
     }
 
-    // Canvas size: the container box when embedded, else the window.
     const dims = (): [number, number] => {
       const el = containerRef.value
       if (props.fillContainer && el) return [el.clientWidth, el.clientHeight]
@@ -52,9 +49,9 @@ onMounted(async () => {
       const canvas = p.createCanvas(w, h)
       canvas.style('display', 'block')
       p.pixelDensity(p.displayDensity())
-      p.colorMode(p.HSB, 360, 100, 100, 1)
+      // RGB mode so purple color can be set directly alongside white/black.
+      p.colorMode(p.RGB, 255)
       p.noFill()
-      // Stroke colour is (re)set each frame in draw() so it reacts to dark mode.
       p.strokeWeight(sw)
       p.strokeCap(p.SQUARE)
       values()
@@ -62,14 +59,19 @@ onMounted(async () => {
 
     p.draw = () => {
       const dark = isDark.value
-      // Embedded (in the circles): transparent canvas — only the lines show, no
-      // solid fill behind them. Fullscreen: keep the white/black backdrop.
       if (props.fillContainer) {
         p.clear()
       } else {
-        p.background(0, 0, dark ? 0 : 100)
+        const bg = dark ? 0 : 255
+        p.background(bg, bg, bg)
       }
-      p.stroke(0, 0, dark ? 100 : 0, 0.5)
+
+      if (props.purple) {
+        p.stroke(130, 15, 193, 128)  // #820FC1 at 50% alpha
+      } else {
+        const v = dark ? 255 : 0
+        p.stroke(v, v, v, 128)
+      }
 
       const wSpc = p.width / lCount
       const hSpc = p.height / rCount
@@ -81,7 +83,6 @@ onMounted(async () => {
           const xA = p.sin(r + mx + x * fx)
           const xB = p.sin(r + my + y * fy)
           const xPos = xA * xB * wSpc
-
           p.push()
           p.translate(wSpc + x * wSpc, y * hSpc)
           p.line(xPos, 0, xPos, hSpc)
@@ -91,7 +92,6 @@ onMounted(async () => {
     }
 
     p.windowResized = () => {
-      // In container mode the ResizeObserver handles sizing.
       if (!props.fillContainer) {
         const [w, h] = dims()
         p.resizeCanvas(w, h)
@@ -129,7 +129,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="containerRef" class="p5-background" :class="{ 'p5-background--contained': fillContainer }"></div>
+  <div ref="containerRef" class="p5-background" :class="{ 'p5-background--contained': fillContainer, 'p5-background--dark': isDark }"></div>
 </template>
 
 <style scoped>
@@ -139,11 +139,15 @@ onUnmounted(() => {
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: -1;
+  z-index: 1;
   pointer-events: none;
+  mix-blend-mode: multiply;
 }
 
-/* Embedded: fill the parent box instead of the window. */
+.p5-background--dark {
+  mix-blend-mode: screen;
+}
+
 .p5-background--contained {
   position: absolute;
   inset: 0;

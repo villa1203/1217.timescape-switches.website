@@ -11,12 +11,20 @@ const props = withDefaults(defineProps<{
   color?: string
   stroke_width?: number
   sketch?: boolean
+  sketch_purple?: boolean  // draw the embedded P5 sketch in purple
   draw?: boolean
   play?: 'in' | 'out' | 'shown' | null
+  gradient?: boolean
+  dot_size?: number  // base dot length (SVG units); default 0.1 = tiny dot
+  pulse?: boolean    // enable random size-pulse animation; set false to freeze dots
 }>(), {
   sketch: true,
+  sketch_purple: false,
   draw: false,
   play: null,
+  gradient: false,
+  dot_size: 0.1,
+  pulse: true,
 })
 
 const sw = computed(() => props.stroke_width ?? 1.5)
@@ -24,22 +32,19 @@ const sw = computed(() => props.stroke_width ?? 1.5)
 // Unique id suffix so multiple instances don't share <defs> (clip/filter).
 const uid = useId()
 
-// Dot style: near-zero dash + round linecap = circular dot (same as globe).
+// Dot style: reactive so the parent can drive bigger dots at runtime.
 const shapesRef = ref<SVGGElement | null>(null)
-const DOT = 0.1
-const GAP = 9.9
+const DOT = computed(() => props.dot_size)
+const GAP = computed(() => Math.max(0.1, 10 - DOT.value))
 const EMPTY_RATIO = 0
 
 // ── Pulse constants ───────────────────────────────────────────────────────
-// Each pulse is fully random: accel duration, decel duration, peak rate and
-// dash length. progress goes 0 → 1 (accel) then immediately 1 → 0 (decel) —
-// no hold at peak.
-const MAX_RATE    = 5      // peak playback rate cap
-const MAX_DASH    = 4      // peak dash length cap
-const DUR_MIN     = 3000   // shortest accel or decel (ms)
-const DUR_MAX     = 8000   // longest accel or decel (ms)
-const DUR_JITTER  = 0.25   // each side can deviate ±25% from the shared base
-const REST_MIN    = 6000   // rest between pulses (ms)
+const MAX_RATE    = 5
+const MAX_DASH    = 4
+const DUR_MIN     = 3000
+const DUR_MAX     = 8000
+const DUR_JITTER  = 0.25
+const REST_MIN    = 6000
 const REST_MAX    = 22000
 
 // Store per-element computed dasharray so it restores perfectly after the pulse.
@@ -50,17 +55,17 @@ let pulseRafId = 0
 let isPulsing  = false
 
 function scheduleNextPulse() {
+  if (!props.pulse) return
   const delay = REST_MIN + Math.random() * (REST_MAX - REST_MIN)
   pulseTimer = setTimeout(triggerPulse, delay)
 }
 
 function triggerPulse() {
-  if (isPulsing) return
+  if (isPulsing || !props.pulse) return
   const group = shapesRef.value
   if (!group) return
   isPulsing = true
 
-  // Each pulse is unique — random timing and intensity within caps.
   const peakRate = 1.5 + Math.random() * (MAX_RATE - 1.5)
   const dashMax  = 0.5 + Math.random() * (MAX_DASH - 0.5)
   const baseDur  = DUR_MIN + Math.random() * (DUR_MAX - DUR_MIN)
@@ -69,6 +74,9 @@ function triggerPulse() {
 
   const shapes = Array.from(group.querySelectorAll('ellipse, circle')) as SVGGeometryElement[]
   const swVal  = sw.value
+  // Capture current dot/gap so the pulse is consistent even if prop changes mid-flight.
+  const dot = DOT.value
+  const gap = GAP.value
   const start  = performance.now()
 
   const tick = () => {
@@ -85,13 +93,13 @@ function triggerPulse() {
       progress = 0
     }
 
-    const dash = DOT + progress * (dashMax - DOT)
-    const gap  = GAP - progress * (GAP - (10 - dashMax))
+    const d = dot + progress * (dashMax - dot)
+    const g = gap - progress * (gap - (10 - dashMax))
     const rate = 1 + progress * (peakRate - 1)
     const w    = swVal * (1 + progress * 0.2)
 
     shapes.forEach(el => {
-      el.style.strokeDasharray = `${dash.toFixed(2)} ${gap.toFixed(2)}`
+      el.style.strokeDasharray = `${d.toFixed(2)} ${g.toFixed(2)}`
       el.style.strokeWidth     = w.toFixed(2)
       el.getAnimations().forEach(a => { a.playbackRate = rate })
     })
@@ -112,22 +120,47 @@ function triggerPulse() {
   pulseRafId = requestAnimationFrame(tick)
 }
 
-onMounted(() => {
-  // Compute per-shape dasharray so dots fill each ring perfectly
+function measureShapes() {
   const group = shapesRef.value
-  if (group) {
-    for (const el of Array.from(group.querySelectorAll('ellipse, circle')) as SVGGeometryElement[]) {
-      const len = el.getTotalLength()
-      const n = Math.max(2, Math.round(((1 - EMPTY_RATIO) * len + DOT) / (DOT + GAP)))
-      const hole = Math.max(DOT, len - ((n - 1) * (DOT + GAP) + DOT))
-      const dash = `${Array(n - 1).fill(`${DOT} ${GAP}`).join(' ')} ${DOT} ${hole}`
-      el.style.strokeDasharray = dash
-      el.style.setProperty('--len', String(len))
-      baseDA.set(el, dash)
-    }
+  if (!group) return
+  const dot = DOT.value
+  const gap = GAP.value
+  for (const el of Array.from(group.querySelectorAll('ellipse, circle')) as SVGGeometryElement[]) {
+    const len = el.getTotalLength()
+    const n = Math.max(2, Math.round(((1 - EMPTY_RATIO) * len + dot) / (dot + gap)))
+    const hole = Math.max(dot, len - ((n - 1) * (dot + gap) + dot))
+    const dash = `${Array(n - 1).fill(`${dot} ${gap}`).join(' ')} ${dot} ${hole}`
+    el.style.strokeDasharray = dash
+    el.style.setProperty('--len', String(len))
+    baseDA.set(el, dash)
   }
+}
 
+onMounted(() => {
+  measureShapes()
   scheduleNextPulse()
+})
+
+watch(() => props.dot_size, () => {
+  if (shapesRef.value) measureShapes()
+})
+
+watch(() => props.pulse, (on) => {
+  if (!on) {
+    if (pulseTimer) { clearTimeout(pulseTimer); pulseTimer = null }
+    cancelAnimationFrame(pulseRafId)
+    isPulsing = false
+    const group = shapesRef.value
+    if (group) {
+      for (const el of Array.from(group.querySelectorAll('ellipse, circle')) as SVGGeometryElement[]) {
+        el.style.strokeDasharray = baseDA.get(el) ?? ''
+        el.style.strokeWidth = ''
+        el.getAnimations().forEach(a => { a.playbackRate = 1 })
+      }
+    }
+  } else {
+    scheduleNextPulse()
+  }
 })
 
 onUnmounted(() => {
@@ -149,6 +182,16 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
     preserveAspectRatio="xMidYMid meet"
   >
     <defs>
+      <linearGradient
+        v-if="gradient"
+        :id="`dc-grad-${uid}`"
+        gradientUnits="userSpaceOnUse"
+        x1="0" y1="356" x2="1565" y2="356"
+      >
+        <stop offset="0%"   stop-color="#3f3f3f" />
+        <stop offset="100%" stop-color="#000000" />
+      </linearGradient>
+
       <clipPath :id="`dc-clip-${uid}`">
         <ellipse cx="146"  cy="356" rx="145.5" ry="355.5" />
         <circle  cx="423"  cy="357" r="355" />
@@ -180,32 +223,34 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
       </mask>
     </defs>
 
-    <foreignObject
-      v-if="sketch"
-      x="0" y="0" width="1565" height="713"
-      :clip-path="`url(#dc-clip-${uid})`"
-    >
-      <div xmlns="http://www.w3.org/1999/xhtml" class="dc-sketch">
-        <P5Background :fill-container="true" />
-      </div>
-    </foreignObject>
+    <Transition name="dc-sketch-fade">
+      <foreignObject
+        v-if="sketch"
+        x="0" y="0" width="1565" height="713"
+        :clip-path="`url(#dc-clip-${uid})`"
+      >
+        <div xmlns="http://www.w3.org/1999/xhtml" class="dc-sketch">
+          <P5Background :fill-container="true" :purple="sketch_purple" />
+        </div>
+      </foreignObject>
+    </Transition>
 
     <g ref="shapesRef" class="dc-shapes" fill="none" :mask="draw ? `url(#dc-draw-${uid})` : undefined">
       <ellipse
         cx="146" cy="356" rx="145.5" ry="355.5"
         class="dc-spin-left"
-        :stroke="color || 'white'"
+        :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')"
         :stroke-width="sw"
         stroke-linecap="round"
         stroke-dasharray="0.1 9.9"
       />
-      <circle cx="423"  cy="357" r="355" :stroke="color || 'white'" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
-      <circle cx="781"  cy="357" r="355" :stroke="color || 'white'" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
-      <circle cx="1138" cy="357" r="355" :stroke="color || 'white'" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
+      <circle cx="423"  cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
+      <circle cx="781"  cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
+      <circle cx="1138" cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
       <ellipse
         cx="1419" cy="356" rx="145.5" ry="355.5"
         class="dc-spin-right"
-        :stroke="color || 'white'"
+        :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')"
         :stroke-width="sw"
         stroke-linecap="round"
         stroke-dasharray="0.1 9.9"
@@ -252,6 +297,16 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
   .dc-draw-strokes.is-in > *,
   .dc-draw-strokes.is-shown > * { stroke-dasharray: 1 0; animation: none; }
   .dc-draw-strokes.is-out > *   { stroke-dasharray: 0 1; animation: none; }
+}
+
+/* ── Sketch fade ─────────────────────────────────────────────────────── */
+.dc-sketch-fade-enter-active,
+.dc-sketch-fade-leave-active {
+  transition: opacity 0.6s ease;
+}
+.dc-sketch-fade-enter-from,
+.dc-sketch-fade-leave-to {
+  opacity: 0;
 }
 
 /* ── Rotating dots ────────────────────────────────────────────────────── */
