@@ -9,6 +9,7 @@ const props = defineProps<{
   hoverColor?: string
   stroke_width?: number
   font_size?: number
+  max_width?: number
   active?: boolean
   flip?: boolean   // invert the default state: filled by default, plain on hover
 }>()
@@ -37,6 +38,7 @@ const isInverted = computed(() => (isHovered.value || !!props.active) !== !!prop
       :inverted="isInverted"
       :stroke_width="stroke_width"
       :font_size="font_size"
+      :max_width="max_width"
     />
   </nuxt-link>
 
@@ -55,6 +57,7 @@ const isInverted = computed(() => (isHovered.value || !!props.active) !== !!prop
       :inverted="isInverted"
       :stroke_width="stroke_width"
       :font_size="font_size"
+      :max_width="max_width"
     />
   </a>
 
@@ -70,6 +73,7 @@ const isInverted = computed(() => (isHovered.value || !!props.active) !== !!prop
       :inverted="isInverted"
       :stroke_width="stroke_width"
       :font_size="font_size"
+      :max_width="max_width"
     />
   </button>
 </template>

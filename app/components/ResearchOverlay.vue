@@ -38,26 +38,26 @@
         <div class="overlay-list">
           <div class="list-content">
 
-            <span class="list-label">Origin</span>
-
-            <NuxtLink
-              to="/research"
-              @click="close"
-              class="origin-link overlay-nav-link"
-              @mouseenter="designTimeHover = true"
-              @mouseleave="designTimeHover = false"
-            >
-              <StickerParagraph text="Design & Time" :font_size="32" :inverted="designTimeHover" />
-            </NuxtLink>
+            <span class="list-label list-label--origin">Origin</span>
 
             <NuxtLink
               to="/shabbat-as-a-time-ritual"
               @click="close"
-              class="origin-link origin-link--last overlay-nav-link"
+              class="origin-link overlay-nav-link"
               @mouseenter="shabbatHover = true"
               @mouseleave="shabbatHover = false"
             >
-              <StickerParagraph text="Shabbat as a time ritual" :font_size="32" :inverted="shabbatHover" />
+              <StickerParagraph text="Shabbat as a time ritual" :font_size="38" color="var(--app-color-secondary)" :inverted="shabbatHover" />
+            </NuxtLink>
+
+            <NuxtLink
+              to="/research"
+              @click="close"
+              class="origin-link origin-link--last overlay-nav-link"
+              @mouseenter="designTimeHover = true"
+              @mouseleave="designTimeHover = false"
+            >
+              <StickerParagraph text="Design & Time" :font_size="38" color="var(--app-color-secondary)" :inverted="designTimeHover" />
             </NuxtLink>
 
             <span class="list-label">Objects</span>
@@ -83,6 +83,27 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- Studio credit, bottom-right — the Bureau 1217 logo recoloured to brand
+           purple (the source SVG is white): flood purple, clipped to the logo's
+           own shape via its alpha. -->
+      <div class="overlay-bureau">
+        <a
+          href="https://bureau1217.ch/"
+          target="_blank"
+          rel="noopener"
+          class="overlay-bureau__link"
+          aria-label="Project by Bureau 1217"
+        >
+          <svg class="overlay-bureau__logo" viewBox="0 0 478.4 69" aria-hidden="true">
+            <filter id="bureau-purple" x="0" y="0" width="100%" height="100%">
+              <feFlood flood-color="#820FC1" result="purple" />
+              <feComposite in="purple" in2="SourceAlpha" operator="in" />
+            </filter>
+            <image href="/B1217_LOGO-BLANC-01.svg" x="0" y="0" width="478.4" height="69" filter="url(#bureau-purple)" />
+          </svg>
+        </a>
       </div>
     </div>
   </Teleport>
@@ -198,7 +219,7 @@ onUnmounted(() => {
   visibility: hidden; // cascades to descendants — they aren't click/scroll targets when closed
   pointer-events: none;
   // delay visibility change until after the fade-out completes
-  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+  transition: opacity 0.5s ease-in-out, visibility 0s linear 0.5s;
 
   // Opening: by default (non-home, no circles) the panel fades in immediately.
   // Closing (the default block above) also has no delay — it reveals the
@@ -207,13 +228,13 @@ onUnmounted(() => {
     opacity: 1;
     visibility: visible;
     pointer-events: all;
-    transition: opacity 0.3s ease, visibility 0s linear 0s;
+    transition: opacity 0.5s ease-in-out, visibility 0s linear 0s;
   }
 
   // Home only: hold the panel back while the circles erase, then fade it in.
   &.is-home.is-open {
     transition:
-      opacity 0.3s ease var(--overlay-open-delay),
+      opacity 0.5s ease-in-out var(--overlay-open-delay),
       visibility 0s linear var(--overlay-open-delay);
   }
 }
@@ -242,6 +263,40 @@ onUnmounted(() => {
 
 .overlay-nav-link {
   text-decoration: none;
+}
+
+/* Studio credit pinned to the overlay's bottom-right, aligned with the nav gutter. */
+.overlay-bureau {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  z-index: 2;
+  padding: var(--app-grid-gap, 1rem);
+
+  @media (max-width: 768px) {
+    // Stay clear of the iOS/Android browser chrome at the very bottom.
+    padding-bottom: calc(var(--app-grid-gap, 1rem) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.overlay-bureau__link {
+  display: inline-block;
+  // Same little hover pop as the close button / stickers.
+  transition: transform 0.2s ease;
+
+  &:hover { transform: scale(1.05); }
+}
+
+.overlay-bureau__logo {
+  display: block;
+  // Small studio credit.
+  height: 1.5rem;
+  width: auto;
+  overflow: visible;
+
+  @media (max-width: 768px) {
+    height: 1.2rem;
+  }
 }
 
 /* ── close button: extracted to <OverlayCloseButton> ── */
@@ -313,11 +368,24 @@ onUnmounted(() => {
 /* ── right: list ── */
 .overlay-list {
   display: flex;
-  align-items: center;
+  // `safe center`: vertically centred when it fits, but falls back to top
+  // alignment (instead of clipping the top) once the content is taller than the
+  // column — so the overflow below stays reachable by scrolling.
+  align-items: safe center;
   justify-content: center;
+  // Scroll the list when the viewport is too short for the full menu.
+  // NB: setting overflow-y also makes overflow-x compute to `auto` (clip), so the
+  // horizontal padding below is what keeps the stickers' blob outline (which
+  // overflows left/right of the text) from being cut at the column edges.
+  overflow-y: auto;
   // Push the centered list block down a bit — reduces the available space
   // at the top of the flex container.
   padding-top: 6rem;
+  // Breathing room so the last item isn't flush against the bottom when scrolled.
+  padding-bottom: 2rem;
+  // Side margins so the sticker outlines aren't clipped at the column edges.
+  padding-left: 2.5rem;
+  padding-right: 2.5rem;
 }
 
 .list-content {
@@ -346,13 +414,29 @@ onUnmounted(() => {
   line-height: 1.6;
 }
 
-// "Origin" links (Design & Time, Shabbat as a time ritual) sit tight together…
+// "Origin" section label + its links (Design & Time, Shabbat as a time ritual)
+// use the orange secondary colour instead of the default purple.
+.list-label--origin {
+  color: var(--app-color-secondary);
+}
+
+// "Origin" links (Design & Time, Shabbat as a time ritual) use the same vertical
+// pitch as the objects list (.objects-list__item height) so the line spacing
+// between them matches the objects' line spacing across the panel.
 .origin-link {
-  margin-bottom: 0.5rem;
+  display: block;
+  height: 68px;   // = .objects-list__item height (the desired visual pitch)
+  // Same hover interaction as the objects below: shift left on hover.
+  transition: transform 0.15s ease;
+}
+
+.origin-link:hover {
+  transform: translateX(-6px);
 }
 
 // …with a larger gap after the last one before the "Objects" section.
 .origin-link--last {
+  height: auto;
   margin-bottom: 3rem;
 }
 

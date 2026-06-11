@@ -79,4 +79,14 @@ defineProps<{
 .block-bullet-point__item__text :deep(p) {
   margin: 0;
 }
+
+/* CMS text links: brand violet instead of the browser default blue. */
+.block-bullet-point__item__text :deep(a) {
+  color: var(--app-color-primary);
+  text-decoration: underline;
+}
+
+.block-bullet-point__item__text :deep(a:hover) {
+  text-decoration: none;
+}
 </style>

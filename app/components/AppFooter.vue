@@ -2,12 +2,13 @@
     <footer class="v-app-footer app-with-padding--top-bottom app-with-padding--left-right"
             :class="{ 'v-app-footer--locked': isShabbat, 'v-app-footer--scroll-hidden': footerHidden }"
     >
-      <div class="v-app-footer__container">
-        <StickerParagraph
+      <div class="v-app-footer__container app-grid app-grid--justify-between app-grid--direction-column">
+        <StickerButton
           :text="`Design Research On Ritual\nConstraints And Domestic Technology`"
+          to="/"
           :font_size="footerFontSize"
           :max_width="FOOTER_TEXT_MAX_WIDTH"
-          :inverted="isShabbat"
+          :flip="isDark"
         />
         <div class="v-app-footer__dark-toggle">
           <DarkModeToggle
@@ -64,6 +65,20 @@ const footerHidden = computed(() =>
   // Same overflow protection as the nav — sticker SVGs never push outside the screen
   overflow-x: hidden;
   transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+// The footer wrapper (app.vue) sets `pointer-events: none` on itself + every
+// descendant so the decorative footer never blocks clicks on the page behind.
+// We want ONLY the visible text glyphs to be clickable (→ home), not the whole
+// footer nor the empty area inside the text's bounding box. So we leave the
+// anchor's rectangular box non-interactive and re-enable hit-testing on the SVG
+// itself: SVG's default `visiblePainted` only registers clicks on painted areas
+// (the letters), so the empty space around/between them stays click-through.
+.v-app-footer :deep(.sticker-button) {
+  pointer-events: none;
+}
+.v-app-footer :deep(.sticker-pg__svg) {
+  pointer-events: visiblePainted;
 }
 
 .v-app-footer__container {

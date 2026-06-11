@@ -6,7 +6,16 @@
 // is left untouched.
 export default defineNuxtPlugin(() => {
   const frames = ['/Favicontms.png', '/Favicontms2.png']
-  const INTERVAL_MS = 1500 // slow blink
+  const INTERVAL_MS = 1500 // slow blink — each frame is shown for exactly this long
+
+  // Preload + decode both PNGs up front. Without this, the first time a frame is
+  // shown the browser has to fetch/decode it, so the tab icon updates late and
+  // that frame appears to linger — the blink looks uneven. Decoding ahead makes
+  // every swap instant, so both favicons get an identical on-screen time.
+  frames.forEach((src) => {
+    const img = new Image()
+    img.src = src
+  })
 
   let i = 0
   let current: HTMLLinkElement | null = null

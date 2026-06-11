@@ -117,6 +117,16 @@ const stickerParagraphs = computed(() => {
   content: "\00a0";
 }
 
+/* CMS text links: brand violet instead of the browser default blue. */
+.block-text__body :deep(a) {
+  color: var(--app-color-primary);
+  text-decoration: underline;
+}
+
+.block-text__body :deep(a:hover) {
+  text-decoration: none;
+}
+
 .block-text__body :deep(ul),
 .block-text__body :deep(ol) {
   margin: 0 0 1rem;
