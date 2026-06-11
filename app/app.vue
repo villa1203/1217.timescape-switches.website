@@ -28,6 +28,16 @@
 import { computed, onMounted, watch } from 'vue'
 import { useShabbatCountdown } from '~/composables/useShabbatCountdown'
 import { useAppLoader } from '~/composables/useAppLoader'
+import {initMatomo, updateMatomoWithNavigation} from "#shared/matomo";
+
+
+if (import.meta.client) {
+    initMatomo()
+    useRouter().afterEach((to, from) => {
+        updateMatomoWithNavigation(from.fullPath)
+    })
+}
+
 
 // Header/footer stay hidden until the initial loader finishes.
 const { loaderDone } = useAppLoader()
