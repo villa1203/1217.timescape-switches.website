@@ -53,6 +53,7 @@ const isHovered = ref(false)
       :font_size="font_size"
       :color="color"
       :inverted="isHovered"
+      :blob_scale="0.8"
     />
   </button>
 </template>

@@ -135,28 +135,34 @@ $glow-alpha:   0.65;
   // Same sticker inner-glow as the pill, scaled smaller for the knob
   box-shadow: inset 0 0 $glow-knob rgba($color, $glow-alpha);
 
+  // Only transform animates — animating `left` is a layout property that janks
+  // on mobile (visible as the knob stuttering / not settling fully to a side).
   transition:
-    left             $ease,
     transform        $ease,
     background-color $ease,
     box-shadow       $ease;
 
-  // Hover: only the knob grows, very slightly. The translate is kept so the
-  // knob stays anchored — scale alone would re-center it and make it jump.
-  .sticker-toggle:hover & {
-    transform: translate(0, -50%) scale(1.06);
-  }
-
+  // Slide to the right edge via transform only. 142.6% of the knob's own width
+  // is the exact off→on travel for the current geometry (pill ratio 93/46, 8%
+  // inset, 70% knob height); because every term scales with the pill width, the
+  // same percentage stays correct at any pill size (desktop and mobile).
   .is-on & {
-    // mirror inset on the right — same gap as the off state on the left
-    left: calc(100% - #{$knob-inset});
-    transform: translate(-100%, -50%);
+    transform: translate(142.6%, -50%);
     background: $color;
     box-shadow: inset 0 0 $glow-knob rgba($bg, $glow-alpha);
   }
 
-  .sticker-toggle.is-on:hover & {
-    transform: translate(-100%, -50%) scale(1.12);
+  // Hover grow only on devices with a real pointer. On touch the :hover state
+  // sticks after a tap, so the scale would fire mid-toggle and leave the knob
+  // offset / not fully to one side.
+  @media (hover: hover) {
+    .sticker-toggle:hover & {
+      transform: translate(0, -50%) scale(1.06);
+    }
+
+    .sticker-toggle.is-on:hover & {
+      transform: translate(142.6%, -50%) scale(1.12);
+    }
   }
 }
 </style>

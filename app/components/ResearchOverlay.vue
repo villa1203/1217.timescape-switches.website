@@ -46,7 +46,7 @@
         </div>
 
         <!-- Right half: hierarchy + list -->
-        <div class="overlay-list">
+        <div class="overlay-list" ref="listRef">
           <div class="list-content">
 
             <span class="list-label list-label--origin">Origin</span>
@@ -58,7 +58,7 @@
               @mouseenter="shabbatHover = true; shabbatMounted = true"
               @mouseleave="shabbatHover = false"
             >
-              <StickerParagraph text="Sacred Time Structure" :font_size="38" color="var(--app-color-secondary)" :inverted="shabbatHover" />
+              <StickerParagraph text="Sacred Time Structure" :font_size="38" color="var(--app-color-secondary)" :inverted="shabbatHover" :blob_scale="0.8" :max_width="stickerMaxWidth" />
             </NuxtLink>
 
             <NuxtLink
@@ -68,7 +68,7 @@
               @mouseenter="designTimeHover = true"
               @mouseleave="designTimeHover = false"
             >
-              <StickerParagraph text="Design & Time" :font_size="38" color="var(--app-color-secondary)" :inverted="designTimeHover" />
+              <StickerParagraph text="Design & Time" :font_size="38" color="var(--app-color-secondary)" :inverted="designTimeHover" :blob_scale="0.8" :max_width="stickerMaxWidth" />
             </NuxtLink>
 
             <span class="list-label">Objects</span>
@@ -86,6 +86,8 @@
                     :font_size="38"
                     :line_height="1.0"
                     :inverted="activeObject?.id === obj.id"
+                    :blob_scale="0.8"
+                    :max_width="stickerMaxWidth"
                   />
                 </NuxtLink>
               </li>
@@ -121,10 +123,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { useResearchOverlay } from '~/composables/useResearchOverlay'
 
 const { isOpen, close } = useResearchOverlay()
+
+// Measure the list column's real width so the sticker links wrap to fit it
+// (the column is ~50% of the viewport on desktop, so the default 600px / viewport
+// wrap width overflowed it and got clipped on the right). Subtract a margin for
+// the blob outline that extends past the text.
+const listRef = ref<HTMLElement | null>(null)
+const listWidth = ref(600)
+const stickerMaxWidth = computed(() => Math.max(120, listWidth.value - 32))
+let listRO: ResizeObserver | null = null
 
 // Fetch each object's CMS 3D model URL so the hover preview loads the same .glb
 // as the detail page. (The bundled /public/*.glb fallbacks were removed once
@@ -213,9 +224,21 @@ watch(isOpen, (val) => {
   }
 })
 
+onMounted(() => {
+  if (listRef.value && typeof ResizeObserver !== 'undefined') {
+    listRO = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width
+      if (w && w > 0) listWidth.value = w
+    })
+    listRO.observe(listRef.value)
+  }
+})
+
 onUnmounted(() => {
   document.removeEventListener('keydown', onKeydown)
   document.body.style.overflow = ''
+  listRO?.disconnect()
+  listRO = null
 })
 </script>
 
@@ -502,14 +525,16 @@ onUnmounted(() => {
 // between them matches the objects' line spacing across the panel.
 .origin-link {
   display: block;
-  height: 68px;   // = .objects-list__item height (the desired visual pitch)
+  // min-height (not fixed height) = the single-line pitch, but the box grows
+  // when the label wraps to 2 lines instead of overlapping the next link.
+  min-height: 68px;
   // Same hover interaction as the objects below: shift left on hover.
   transition: transform 0.15s ease;
 
   // Mobile: match the objects list's mobile line spacing (.objects-list__item)
   // so the gap between "Sacred Time Structure" and "Design & Time" lines up.
   @media (max-width: 768px) {
-    height: auto;
+    min-height: 0;
     margin-bottom: 0.5rem;
   }
 }
@@ -538,10 +563,10 @@ onUnmounted(() => {
 .objects-list__item {
   cursor: default;
   position: relative;
-  // Fixed hit zone height = desired visual pitch (116px SVG − 48px visual collapse).
-  // SVG overflows visually into the next item's space, creating the stacked look,
-  // but the DOM boxes are non-overlapping so mouseenter/leave are unambiguous.
-  height: 68px;
+  // min-height = the single-line pitch (SVG overflows into the next item's space
+  // for the stacked look); the box grows when a label wraps to 2 lines so it no
+  // longer overlaps the next item.
+  min-height: 68px;
   overflow: visible;
   transition: transform 0.15s ease;
 
@@ -560,7 +585,7 @@ onUnmounted(() => {
   // Last item has no neighbour to "cover" its SVG overflow → extend hit-zone
   // to the full SVG height so hovering the bottom half of the label still fires.
   &:last-child {
-    height: 116px;
+    min-height: 116px;
   }
 
   &:hover {
@@ -570,11 +595,11 @@ onUnmounted(() => {
   // Mobile: disable the SVG-overflow stacking trick so labels don't bleed onto each other.
   // Multi-line labels ("Shabbat Refrigerator") otherwise overlap the next item visually.
   @media (max-width: 768px) {
-    height: auto;
+    min-height: 0;
     margin-bottom: 0.5rem;
 
     &:last-child {
-      height: auto;
+      min-height: 0;
     }
   }
 }

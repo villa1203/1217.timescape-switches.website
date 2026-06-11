@@ -9,6 +9,7 @@
           :font_size="footerFontSize"
           :max_width="FOOTER_TEXT_MAX_WIDTH"
           :flip="isDark"
+          :blob_scale="1.25"
         />
         <Transition name="dark-toggle-fade">
           <div v-if="isHome && !isResearchOpen" class="v-app-footer__dark-toggle">

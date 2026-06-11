@@ -3,7 +3,7 @@
     >
       <div class="app-grid app-grid--justify-between">
         <div class="nav-left">
-          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :flip="isShabbat" />
+          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :flip="isShabbat" :blob_scale="1.25" />
         </div>
 
         <div :class="['nav-right', { 'nav-right--hidden': isOpen, 'nav-right--scroll-hidden': hiddenOnScroll, 'nav-right--locked': isShabbat }]">
@@ -16,11 +16,12 @@
                 color="var(--app-color-primary)"
                 :active="researchActive"
                 :flip="isShabbat"
+                :blob_scale="1.25"
               />
             </div>
 
             <div>
-              <StickerButton text="Info" @click="openInfo" :font_size="navFontSize" :active="isInfoPage" :flip="isShabbat" />
+              <StickerButton text="Info" @click="openInfo" :font_size="navFontSize" :active="isInfoPage" :flip="isShabbat" :blob_scale="1.25" />
             </div>
           </div>
         </div>

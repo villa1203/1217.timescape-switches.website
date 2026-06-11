@@ -12,6 +12,7 @@ const props = defineProps<{
   max_width?: number
   active?: boolean
   flip?: boolean   // invert the default state: filled by default, plain on hover
+  blob_scale?: number  // forwarded to StickerParagraph — chunkier blob (nav/footer)
 }>()
 
 const isHovered = ref(false)
@@ -39,6 +40,7 @@ const isInverted = computed(() => (isHovered.value || !!props.active) !== !!prop
       :stroke_width="stroke_width"
       :font_size="font_size"
       :max_width="max_width"
+      :blob_scale="blob_scale"
     />
   </nuxt-link>
 
@@ -58,6 +60,7 @@ const isInverted = computed(() => (isHovered.value || !!props.active) !== !!prop
       :stroke_width="stroke_width"
       :font_size="font_size"
       :max_width="max_width"
+      :blob_scale="blob_scale"
     />
   </a>
 
@@ -74,6 +77,7 @@ const isInverted = computed(() => (isHovered.value || !!props.active) !== !!prop
       :stroke_width="stroke_width"
       :font_size="font_size"
       :max_width="max_width"
+      :blob_scale="blob_scale"
     />
   </button>
 </template>

@@ -25,7 +25,7 @@
               :play="circlePlay"
             />
           </div>
-          <div class="hero-logo-layer">
+          <div class="hero-logo-layer" :class="{ 'hero-anim-ready': heroReady }" :style="animDelay">
             <!-- Shabbat: a CMS-authored phrase replaces the logo (real Shabbat only, not toggle). -->
             <h1 v-if="isShabbat && shabbatTitle" class="hero-shabbat-title">
               <StickerParagraph :text="shabbatTitle" :font_size="shabbatTitleSize" :stroke_width="shabbatTitleStroke" :max_width="1200" :line_height="1.05" :inverted="true" />
@@ -137,11 +137,24 @@ const circlePlay = ref<'in' | 'out' | 'shown'>('shown')
 // How long to let the erase play before actually navigating away from the home.
 const LEAVE_ERASE_MS = 800
 
+// Phase-lock the mobile logo marquee to the loader's identical marquee, so the
+// loader logo sits exactly on the home logo when the loader fades out (no jump).
+// The marquee is only enabled once `heroReady` is set (onMounted) — same as the
+// loader's `.loader--ready` — so both animations START at mount, then the
+// performance.now()-anchored delay puts them at the same phase. (The marquee
+// must NOT run from the prerendered paint, or its start time wouldn't match the
+// computed delay, which is what threw the alignment off.)
+const heroReady = ref(false)
+const animDelay = ref<Record<string, string>>({})
+
 onMounted(() => {
   // On a fresh load the intro loader plays the draw, so the home circles start
   // already drawn. Arriving via client navigation (loader already done) instead
   // replays the draw here.
   circlePlay.value = loaderDone.value ? 'in' : 'shown'
+
+  animDelay.value = { '--marquee-delay': `${-(performance.now() % 20000)}ms` }
+  heroReady.value = true
 })
 
 // Opening the Research overlay erases the circles; closing it redraws them.
@@ -319,7 +332,16 @@ const shabbatTitleStroke = computed(() => Math.round(shabbatTitleSize.value * 0.
   @media (max-width: 768px) {
     width: auto;
     flex-shrink: 0;
-    animation: hero-marquee 20s linear infinite;
+    // Marquee is added under .hero-anim-ready (below), not here — so it starts
+    // at mount (synced with the loader) instead of at the prerendered paint.
+  }
+}
+
+// Enable the marquee only once mounted, mirroring the loader's `.loader--ready`.
+// --marquee-delay (set on .hero-logo-layer) then phase-locks it to the loader.
+.hero-anim-ready .hero-track {
+  @media (max-width: 768px) {
+    animation: hero-marquee 20s linear var(--marquee-delay, 0s) infinite;
   }
 }
 
@@ -401,6 +423,11 @@ const shabbatTitleStroke = computed(() => Math.round(shabbatTitleSize.value * 0.
     flex-shrink: 0;
     // Mobile scrolls (marquee) instead of floating.
     animation: none;
+    // Drop the blend mode on mobile: `multiply` forces the whole logo into a
+    // rasterised layer that mobile GPUs cap, which pixelated the (otherwise
+    // vector-crisp) letters. The fill is only 15% opaque, so the visual change
+    // is minimal. Animations are untouched.
+    mix-blend-mode: normal;
 
     &:nth-child(n + 2) {
       display: block;

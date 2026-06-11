@@ -16,6 +16,9 @@ const props = defineProps<{
   fill_max_width?: boolean // when true, the SVG canvas always spans the full
                            // `max_width` (= container width) instead of shrinking
                            // to the longest line. Use for full-bleed text blocks.
+  blob_scale?:     number  // multiply the font_size-derived blob thickness (and
+                           // border) — default 1. Used to make the nav/footer
+                           // stickers a touch chunkier without affecting the rest.
 }>()
 
 const sizePreset = computed(() => {
@@ -41,8 +44,19 @@ const baseColor = computed(() => {
 // Inverted swaps the colored stroke and the white interior.
 const strokeColor = computed(() => props.inverted ? '#ffffff'        : baseColor.value)
 const bgColor     = computed(() => props.inverted ? baseColor.value : '#ffffff')
+// Extra thickness factor for blobs derived from a custom font_size (default 1).
+const blobScale = computed(() => props.blob_scale ?? 1)
+
 const fs  = computed(() => props.font_size    ?? sizePreset.value.fs)
-const sw  = computed(() => props.stroke_width ?? sizePreset.value.sw)
+// Stroke (blob thickness) scales with a custom font_size so it stays
+// proportional to the text. Without this, small text (e.g. an 18px nav label)
+// got the preset's 28px stroke — far thicker than the glyphs — so neighbouring
+// outlines merged and swallowed the white interior, showing flat colour patches.
+const sw  = computed(() => {
+  if (props.stroke_width != null) return props.stroke_width
+  const p = sizePreset.value
+  return props.font_size != null ? props.font_size * (p.sw / p.fs) * blobScale.value : p.sw
+})
 const lh  = computed(() => props.line_height  ?? 1.2)
 // Left x-offset of text inside the SVG. Sized to the half-stroke so the colored
 // blob just fits flush against the SVG's left edge (no visible indent).
@@ -60,7 +74,12 @@ const svgHeight = computed(() =>
 
 // White interior stroke — covers the glow gradient zone, leaving only `border_size` px
 // of colored border visible. Clamped to min 2px so inter-letter gaps are always filled.
-const border         = computed(() => props.border_size ?? sizePreset.value.bs)
+const border         = computed(() => {
+  if (props.border_size != null) return props.border_size
+  const p = sizePreset.value
+  // Scale the visible coloured border with a custom font_size too (see `sw`).
+  return props.font_size != null ? props.font_size * (p.bs / p.fs) * blobScale.value : p.bs
+})
 const whiteInteriorSW = computed(() => Math.max(sw.value - border.value, 2))
 
 // Generate the white-glow layers that sit between the outer colored stroke (sw)

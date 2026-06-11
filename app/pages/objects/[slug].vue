@@ -274,5 +274,9 @@ const nextObject = computed(() => objectsOrder[(currentIndex.value + 1) % object
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
+  // Inset the buttons from the column edges so the sticker blob (which extends
+  // ~half the stroke past the text) isn't clipped by the column's overflow
+  // (overflow-y:auto → x clips) or the viewport edge on mobile.
+  padding: 0 1rem;
 }
 </style>

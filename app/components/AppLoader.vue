@@ -13,6 +13,13 @@ const phase = ref<'in' | 'out'>('in')
 // (which looked like the image jumping back / reloading).
 const ready = ref(false)
 
+// Phase-lock the loader's mobile marquee to the home's identical one, so the
+// loader logo lands exactly on the home logo when the loader fades out. The
+// delay is anchored to performance.now() (a page-wide clock); both sides enable
+// the marquee at mount, so they share the same phase. Duration must match the
+// home (index.vue): marquee 20s.
+const animDelay = ref<Record<string, string>>({})
+
 // How long the loader stays before starting its exit. Long enough for the
 // circles' draw-on (≈2.1s: 1.5s + 0.6s outside-in stagger) to finish first.
 const HOLD_MS = 2300
@@ -31,6 +38,7 @@ onMounted(() => {
     finish()
     return
   }
+  animDelay.value = { '--marquee-delay': `${-(performance.now() % 20000)}ms` }
   ready.value = true
   window.setTimeout(() => {
     phase.value = 'out'
@@ -49,7 +57,7 @@ onMounted(() => {
       :class="{ 'loader--out': phase === 'out', 'loader--ready': ready }"
       aria-hidden="true"
     >
-      <div class="loader__panel">
+      <div class="loader__panel" :style="animDelay">
         <!-- Dotted circles that draw themselves on while the loader holds. -->
         <div class="loader__circles">
           <DottedCircles color="#fff" :stroke_width="1.5" :sketch="false" :draw="true" :play="ready ? 'in' : null" />
@@ -57,7 +65,11 @@ onMounted(() => {
         <!-- Mobile: 3 identical copies scrolling left forever (seamless loop),
              like the home logo marquee. Desktop: only the first copy is shown. -->
         <div class="loader__track">
-          <img v-for="n in 3" :key="n" src="/TexteTMSLOADER.svg" alt="" class="loader__text" />
+          <!-- Pre-rendered WebP of TexteTMSLOADER.svg at ~3x: the SVG's inner-glow
+               filter is baked at high resolution here, so it stays crisp on
+               mobile (browsers rasterise SVG filters at a capped resolution,
+               which pixelated the live SVG). -->
+          <img v-for="n in 3" :key="n" src="/TexteTMSLOADER.webp" alt="" class="loader__text" />
         </div>
       </div>
     </div>
@@ -124,6 +136,11 @@ onMounted(() => {
   justify-content: center;
   width: 100%;
 
+  // Hidden until `.loader--ready`. The marquee snaps to its (delay-offset) start
+  // phase the instant it's enabled; keeping the logo invisible until then — and
+  // fading it in afterwards — hides that jump.
+  opacity: 0;
+
   @media (max-width: 768px) {
     width: auto;
     flex-shrink: 0;
@@ -157,8 +174,17 @@ onMounted(() => {
 // SSR-painted frame doesn't begin them and have hydration restart them — that
 // restart looked like the image jumping back / reloading.
 .loader--ready {
+  // Fade the logo in once the marquee has snapped to its start phase (so the
+  // snap happens while it's still invisible — no visible jump).
+  .loader__track {
+    opacity: 1;
+    transition: opacity 0.5s ease;
+  }
+
+  // Delay fed by --marquee-delay (set on .loader__panel) to phase-lock with the
+  // home's marquee. 0s fallback = normal.
   @media (max-width: 768px) {
-    .loader__track { animation: loader-marquee 20s linear infinite; }
+    .loader__track { animation: loader-marquee 20s linear var(--marquee-delay, 0s) infinite; }
   }
   @media (min-width: 769px) {
     .loader__text { animation: loader-float 3s ease-in-out infinite; }
