@@ -7,8 +7,9 @@
         </div>
 
         <div :class="['nav-right', { 'nav-right--hidden': isOpen, 'nav-right--scroll-hidden': hiddenOnScroll, 'nav-right--locked': isShabbat }]">
-          <div class="app-grid">
-            <div>
+          <div class="app-grid nav-right__grid">
+            <div style="overflow: hidden !important;">
+                <div style="width: 100%; aspect-ratio: 12/1" />
               <StickerButton
                 text="Research"
                 @click="openResearch"
@@ -20,7 +21,8 @@
               />
             </div>
 
-            <div>
+              <div style="overflow: hidden !important;" >
+                  <div style="width: 100%; aspect-ratio: 7.25/1" />
               <StickerButton text="Info" @click="openInfo" :font_size="navFontSize" :active="isInfoPage" :flip="isShabbat" :blob_scale="1.25" />
             </div>
           </div>
@@ -361,6 +363,14 @@ async function updateShabbatCountdown() {
     opacity: 0;
     pointer-events: none;
   }
+}
+
+.nav-right__grid {
+    transform: translate3d(0, -12px, 0);
+
+    @media (max-width: 768px) {
+        transform: translate3d(0, -10px, 0);
+    }
 }
 
 // Hidden while scrolling down, slides back in on scroll up — mobile only.
