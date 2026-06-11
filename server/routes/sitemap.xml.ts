@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
         select: {
           seo_index: true,
           info: { query: "page('infos')", select: { seo_index: true } },
-          research: { query: "page('research')", select: { seo_index: true } },
+          research: { query: "page('design-time')", select: { seo_index: true } },
           objects: {
             query: "page('objects').children.listed",
             select: { slug: true, seo_index: true },
@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
   const paths: string[] = []
   if (indexed(result.seo_index)) paths.push('/')
   if (result.info && indexed(result.info.seo_index)) paths.push('/info')
-  if (result.research && indexed(result.research.seo_index)) paths.push('/research')
+  if (result.research && indexed(result.research.seo_index)) paths.push('/design-time')
   for (const obj of result.objects ?? []) {
     if (indexed(obj?.seo_index)) paths.push(`/objects/${obj.slug}`)
   }

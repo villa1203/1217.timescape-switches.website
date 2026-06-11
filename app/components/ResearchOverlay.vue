@@ -28,9 +28,20 @@
             </div>
           </template>
 
-          <!-- Design & Time: an image preview in the same spot as the 3D models. -->
+          <!-- Design & Time: the home's 5 dotted circles (no P5 sketch). -->
           <div :class="['preview-mount', { 'is-active': designTimeHover }]">
-            <img src="/Frame1000003925.svg" alt="" class="preview-image" />
+            <div class="preview-circles">
+              <DottedCircles :sketch="false" :color="'#FF6600'" :stroke_width="3" />
+            </div>
+          </div>
+
+          <!-- Sacred Time Structure: the home's rotating wireframe globe, smaller.
+               Mounts on first hover (and unmounts when the panel closes) so its
+               animation loop doesn't run while it's not needed. -->
+          <div v-if="shabbatMounted" :class="['preview-mount', { 'is-active': shabbatHover }]">
+            <div class="preview-globe">
+              <WireframeGlobe />
+            </div>
           </div>
         </div>
 
@@ -41,17 +52,17 @@
             <span class="list-label list-label--origin">Origin</span>
 
             <NuxtLink
-              to="/shabbat-as-a-time-ritual"
+              to="/sacred-time-structured"
               @click="close"
               class="origin-link overlay-nav-link"
-              @mouseenter="shabbatHover = true"
+              @mouseenter="shabbatHover = true; shabbatMounted = true"
               @mouseleave="shabbatHover = false"
             >
-              <StickerParagraph text="Shabbat as a time ritual" :font_size="38" color="var(--app-color-secondary)" :inverted="shabbatHover" />
+              <StickerParagraph text="Sacred Time Structure" :font_size="38" color="var(--app-color-secondary)" :inverted="shabbatHover" />
             </NuxtLink>
 
             <NuxtLink
-              to="/research"
+              to="/design-time"
               @click="close"
               class="origin-link origin-link--last overlay-nav-link"
               @mouseenter="designTimeHover = true"
@@ -80,30 +91,30 @@
               </li>
             </ul>
 
+            <!-- Studio credit. Desktop: absolutely pinned to the overlay's
+                 bottom-right (containing block = .research-overlay, so it escapes
+                 the list's overflow). Mobile: flows in here, below the objects. -->
+            <div class="overlay-bureau">
+              <a
+                href="https://bureau1217.ch/"
+                target="_blank"
+                rel="noopener"
+                class="overlay-bureau__link"
+                aria-label="Project by Bureau 1217"
+              >
+                <svg class="overlay-bureau__logo" viewBox="0 0 478.4 69" aria-hidden="true">
+                  <filter id="bureau-purple" x="0" y="0" width="100%" height="100%">
+                    <feFlood flood-color="#820FC1" result="purple" />
+                    <feComposite in="purple" in2="SourceAlpha" operator="in" />
+                  </filter>
+                  <image href="/B1217_LOGO-BLANC-01.svg" x="0" y="0" width="478.4" height="69" filter="url(#bureau-purple)" />
+                </svg>
+              </a>
+            </div>
+
           </div>
         </div>
 
-      </div>
-
-      <!-- Studio credit, bottom-right — the Bureau 1217 logo recoloured to brand
-           purple (the source SVG is white): flood purple, clipped to the logo's
-           own shape via its alpha. -->
-      <div class="overlay-bureau">
-        <a
-          href="https://bureau1217.ch/"
-          target="_blank"
-          rel="noopener"
-          class="overlay-bureau__link"
-          aria-label="Project by Bureau 1217"
-        >
-          <svg class="overlay-bureau__logo" viewBox="0 0 478.4 69" aria-hidden="true">
-            <filter id="bureau-purple" x="0" y="0" width="100%" height="100%">
-              <feFlood flood-color="#820FC1" result="purple" />
-              <feComposite in="purple" in2="SourceAlpha" operator="in" />
-            </filter>
-            <image href="/B1217_LOGO-BLANC-01.svg" x="0" y="0" width="478.4" height="69" filter="url(#bureau-purple)" />
-          </svg>
-        </a>
       </div>
     </div>
   </Teleport>
@@ -161,6 +172,7 @@ const activeObject      = ref<typeof objects[0] | null>(null)
 const mountedIds        = ref<Record<string, boolean>>({})
 const designTimeHover   = ref(false)
 const shabbatHover      = ref(false)
+const shabbatMounted    = ref(false)  // globe preview: mount on first hover, drop on close
 
 function onObjectEnter(obj: typeof objects[0]) {
   mountedIds.value[obj.id] = true
@@ -195,6 +207,9 @@ watch(isOpen, (val) => {
     document.removeEventListener('keydown', onKeydown)
     document.body.style.overflow = ''
     activeObject.value = null
+    // Drop the globe so its animation loop stops while the panel is closed.
+    shabbatHover.value = false
+    shabbatMounted.value = false
   }
 })
 
@@ -207,9 +222,10 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 /* ── overlay shell ── */
 .research-overlay {
-  // How long to wait before the panel covers the home — long enough for the
-  // dotted circles' erase animation to play (DottedCircles: 1.5s + 0.6s stagger).
-  --overlay-open-delay: 1.9s;
+  // How long to wait before the panel covers the home. The dotted circles keep
+  // erasing underneath (DottedCircles: 1.5s + 0.6s stagger), but the panel now
+  // fades in earlier so the overlay feels snappier to open.
+  --overlay-open-delay: 0.8s;
 
   position: fixed;
   inset: 0;
@@ -274,8 +290,15 @@ onUnmounted(() => {
   padding: var(--app-grid-gap, 1rem);
 
   @media (max-width: 768px) {
-    // Stay clear of the iOS/Android browser chrome at the very bottom.
-    padding-bottom: calc(var(--app-grid-gap, 1rem) + env(safe-area-inset-bottom, 0px));
+    // Mobile: flow in below the objects list (no longer pinned/overlapping).
+    position: static;
+    margin-top: 0.5rem;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    // Extra breathing room below the logo, plus clearance for the iOS/Android
+    // browser chrome at the very bottom.
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -356,13 +379,55 @@ onUnmounted(() => {
   }
 }
 
-/* Design & Time image preview — centred and contained like the 3D models. */
-.preview-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 2rem;
+/* Design & Time: the home's 5 dotted circles, centred in the column. */
+.preview-circles {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
   box-sizing: border-box;
+
+  :deep(.dotted-circles) {
+    width: 110%;
+    height: auto;
+    // Over the white panel keep the real purple (the component defaults to
+    // mix-blend-mode: difference, tuned for the home's animated background).
+    mix-blend-mode: normal;
+  }
+}
+
+/* Shabbat preview: the home's wireframe globe, scaled down and centred.
+   Recoloured orange with a thicker stroke — overriding the component's
+   hard-coded black/purple groups via CSS (which wins over SVG presentation
+   attributes), so the home globe is untouched. */
+.preview-globe {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+
+  :deep(.wireframe-globe) {
+    width: 78%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    background: transparent;   // sit over the panel, no white box
+    // The globe's arcs reach past its own viewBox; show them instead of
+    // clipping the strokes at the edges.
+    overflow: visible;
+    // The globe's horizontal radius (~900) is ~1.8× its vertical radius (~495)
+    // — it's built oblate to fill the wide home viewport. Squish x back so both
+    // radii match and it reads as a round sphere.
+    transform: scaleX(0.55);
+  }
+
+  :deep(.wireframe-globe g) {
+    stroke: var(--app-color-secondary);
+    stroke-width: 5;
+  }
 }
 
 /* ── right: list ── */
@@ -373,11 +438,13 @@ onUnmounted(() => {
   // column — so the overflow below stays reachable by scrolling.
   align-items: safe center;
   justify-content: center;
-  // Scroll the list when the viewport is too short for the full menu.
-  // NB: setting overflow-y also makes overflow-x compute to `auto` (clip), so the
-  // horizontal padding below is what keeps the stickers' blob outline (which
-  // overflows left/right of the text) from being cut at the column edges.
+  // Scroll the list vertically when the viewport is too short for the full menu.
+  // Lock the horizontal axis: the sticker SVG blobs overflow left/right of the
+  // text and would otherwise trigger an unwanted horizontal scrollbar (most
+  // visible on mobile). The horizontal padding below gives the blobs room so
+  // clipping them with `hidden` doesn't cut the visible outline.
   overflow-y: auto;
+  overflow-x: hidden;
   // Purple scrollbar — same params as the other pages (AppLayoutColumns / object page).
   scrollbar-width: thin;
   scrollbar-color: var(--app-color-primary) transparent;
@@ -424,13 +491,13 @@ onUnmounted(() => {
   line-height: 1.6;
 }
 
-// "Origin" section label + its links (Design & Time, Shabbat as a time ritual)
+// "Origin" section label + its links (Design & Time, Sacred Time Structure)
 // use the orange secondary colour instead of the default purple.
 .list-label--origin {
   color: var(--app-color-secondary);
 }
 
-// "Origin" links (Design & Time, Shabbat as a time ritual) use the same vertical
+// "Origin" links (Design & Time, Sacred Time Structure) use the same vertical
 // pitch as the objects list (.objects-list__item height) so the line spacing
 // between them matches the objects' line spacing across the panel.
 .origin-link {
@@ -438,6 +505,13 @@ onUnmounted(() => {
   height: 68px;   // = .objects-list__item height (the desired visual pitch)
   // Same hover interaction as the objects below: shift left on hover.
   transition: transform 0.15s ease;
+
+  // Mobile: match the objects list's mobile line spacing (.objects-list__item)
+  // so the gap between "Sacred Time Structure" and "Design & Time" lines up.
+  @media (max-width: 768px) {
+    height: auto;
+    margin-bottom: 0.5rem;
+  }
 }
 
 .origin-link:hover {
@@ -459,6 +533,7 @@ onUnmounted(() => {
   align-items: flex-start;
   gap: 0;
 }
+
 
 .objects-list__item {
   cursor: default;

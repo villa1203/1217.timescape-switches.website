@@ -59,5 +59,19 @@ const resolvedSrc = computed(() =>
 
 .object-image__caption {
   margin-top: 0.75rem;
+  // Flush-left under the image: stretch to the full image width (the figure
+  // itself is centered) and left-align so the text's left edge lines up with
+  // the image's left edge.
+  align-self: stretch;
+  text-align: left;
+  // A touch smaller than the global .caption size (1.2rem).
+  font-size: 1rem;
+
+  // Caption (légende) is upright and not bold; only the credits below stay
+  // italic (inherited from the global .caption rule).
+  :deep(.app-text-strong) {
+    font-style: normal;
+    font-weight: 400;
+  }
 }
 </style>

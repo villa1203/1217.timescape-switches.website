@@ -6,7 +6,10 @@
 
         <div class="app-grid app-grid--justify-center">
           <div class="app-grid__col-12" >
-            <img src="/TexteTMSINFO.svg" alt="TMS Info" class="hero-svg" style="width: 100%" />
+            <!-- Inlined (not <img>) so the SVG's inner-shadow filter renders at
+                 full device resolution — via <img> mobile browsers rasterise SVG
+                 filters at low res, which made the title look pixelated. -->
+            <div class="hero-svg" role="img" aria-label="TMS Info" v-html="infoTitleSvg" />
           </div>
         </div>
 
@@ -37,6 +40,8 @@ import type {CMS_API_Response, CMS_BlockData} from "#shared/cms_api";
 import AppLayoutColumns from "~/components/AppLayoutColumns.vue";
 import { seoSelect, siteSeoSelect } from "#shared/KQLQueries";
 import { useCmsSeo, type CmsSeoFields, type CmsSiteSeo } from "~/composables/useCmsSeo";
+// Raw SVG markup, inlined into the DOM so its filter stays crisp on mobile.
+import infoTitleSvg from "~/assets/TexteTMSINFO.svg?raw";
 
 const viewerMode = ref('normal')
 
@@ -82,6 +87,17 @@ useCmsSeo(() => ({
 
 <style lang="scss" scoped>
 .v-info {
+
+// Make the inlined title SVG scale to the column width (it ships with fixed
+// width/height attributes); :deep reaches the v-html'd <svg>.
+.hero-svg {
+  width: 100%;
+}
+.hero-svg :deep(svg) {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 
 .viewer-section {
   position: relative;

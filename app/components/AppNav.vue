@@ -46,7 +46,7 @@ const { toggle: openResearch, isOpen } = useResearchOverlay()
 const { isMobile } = useIsMobile()
 const navFontSize = computed(() => isMobile.value ? 18 : 24)
 const route = useRoute()
-const researchActive = computed(() => isOpen.value || route.path.startsWith('/research'))
+const researchActive = computed(() => isOpen.value || route.path.startsWith('/design-time'))
 const isInfoPage = computed(() => route.path.startsWith('/info'))
 
 // Info: navigate directly. (The circles' swap animation that used to play before

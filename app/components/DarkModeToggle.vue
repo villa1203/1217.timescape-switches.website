@@ -40,7 +40,8 @@ function toggle() {
 
 <style scoped lang="scss">
 /* ── tweakables ─────────────────────────────────────────────── */
-$pill-width:   5rem;
+$pill-width:        5rem;
+$pill-width-mobile: 4rem;    // smaller pill on mobile (≤768px)
 $border:       2px;
 $color:        #820FC1;
 $bg:           #ffffff;
@@ -84,20 +85,6 @@ $glow-alpha:   0.65;
     background-color $ease,
     box-shadow       0.35s ease;
 
-  &:hover {
-    box-shadow:
-      inset 0 0 $glow-pill rgba($color, $glow-alpha),
-      0 0 0 6px rgba($color, 0.12),
-      0 0 22px 10px rgba($color, 0.22);
-  }
-
-  &.is-on:hover {
-    box-shadow:
-      inset 0 0 $glow-pill rgba($bg, $glow-alpha),
-      0 0 0 6px rgba($color, 0.2),
-      0 0 22px 10px rgba($color, 0.38);
-  }
-
   // Inline mode: let the parent control positioning (footer use case).
   // `!important` beats the mobile @media rule below without extra selectors.
   &.sticker-toggle--inline {
@@ -121,7 +108,10 @@ $glow-alpha:   0.65;
   @media (max-width: 768px) {
     position: absolute;
     right: auto;
-    left: calc(50% - #{$pill-width} / 2);
+    // Slightly smaller pill on mobile; keep it horizontally centered using the
+    // reduced width so the left offset still lands it in the middle.
+    width: $pill-width-mobile;
+    left: calc(50% - #{$pill-width-mobile} / 2);
   }
 }
 
@@ -151,12 +141,22 @@ $glow-alpha:   0.65;
     background-color $ease,
     box-shadow       $ease;
 
+  // Hover: only the knob grows, very slightly. The translate is kept so the
+  // knob stays anchored — scale alone would re-center it and make it jump.
+  .sticker-toggle:hover & {
+    transform: translate(0, -50%) scale(1.06);
+  }
+
   .is-on & {
     // mirror inset on the right — same gap as the off state on the left
     left: calc(100% - #{$knob-inset});
     transform: translate(-100%, -50%);
     background: $color;
     box-shadow: inset 0 0 $glow-knob rgba($bg, $glow-alpha);
+  }
+
+  .sticker-toggle.is-on:hover & {
+    transform: translate(-100%, -50%) scale(1.12);
   }
 }
 </style>

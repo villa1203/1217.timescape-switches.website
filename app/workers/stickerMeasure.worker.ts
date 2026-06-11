@@ -35,12 +35,19 @@ interface MeasureParams {
 const canvas = new OffscreenCanvas(1, 1)
 const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D
 
-// Resolves once all fonts passed via the `init` message have loaded.
+// Resolves once ALL fonts have loaded (fallback when we can't tell which family
+// a measure needs). `familyReady` resolves per family so a measure only waits
+// for the one font it actually uses — e.g. body text in 'Happy Times NG' no
+// longer blocks on the (separately downloaded) Sligoil faces. This matters on
+// mobile, where waiting for every font delayed all but the first paragraph.
 let fontsReady: Promise<void> | null = null
+const familyReady = new Map<string, Promise<void>>()
 
 function loadFonts(fonts: FontSpec[]): void {
-  fontsReady = Promise.all(
-    fonts.map(async (f) => {
+  const byFamily = new Map<string, Promise<void>[]>()
+
+  const all = fonts.map(async (f) => {
+    const p = (async () => {
       try {
         const face = new FontFace(f.family, `url(${f.url})`, {
           weight: f.weight,
@@ -52,8 +59,25 @@ function loadFonts(fonts: FontSpec[]): void {
       } catch {
         // A failed font just falls back to default metrics for that family.
       }
-    }),
-  ).then(() => undefined)
+    })()
+    if (!byFamily.has(f.family)) byFamily.set(f.family, [])
+    byFamily.get(f.family)!.push(p)
+    return p
+  })
+
+  for (const [family, ps] of byFamily) {
+    familyReady.set(family, Promise.all(ps).then(() => undefined))
+  }
+  fontsReady = Promise.all(all).then(() => undefined)
+}
+
+// Pick the readiness promise for the first known family named in the CSS font
+// stack (e.g. "'Happy Times NG', Georgia, serif"); fall back to all fonts.
+function readyFor(fontFamily: string): Promise<void> | null {
+  for (const [family, pr] of familyReady) {
+    if (fontFamily.includes(family)) return pr
+  }
+  return fontsReady
 }
 
 function computeLines(p: MeasureParams): { lines: string[]; svgWidth: number } {
@@ -115,8 +139,9 @@ self.onmessage = async (e: MessageEvent) => {
   }
 
   if (data?.type === 'measure') {
-    if (fontsReady) {
-      try { await fontsReady } catch { /* measure with whatever is available */ }
+    const ready = readyFor((data.params as MeasureParams).fontFamily)
+    if (ready) {
+      try { await ready } catch { /* measure with whatever is available */ }
     }
     const res = computeLines(data.params as MeasureParams)
     ;(self as unknown as Worker).postMessage({ id: data.id, ...res })

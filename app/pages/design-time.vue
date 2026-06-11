@@ -1,5 +1,5 @@
 <template>
-  <main class="v-shabbat"
+  <main class="v-research"
   >
 
     <AppLayoutColumns>
@@ -42,7 +42,7 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
   // Not lazy: SEO meta must be in the server-rendered HTML for crawlers.
   method: 'POST',
   body: {
-    query: `page('shabbat-as-a-time-ritual')`,
+    query: `page('design-time')`,
     select: {
       title: true,
       slug: true,
@@ -61,7 +61,7 @@ const {data} = useFetch<FetchData>('/api/CMS_KQLRequest', {
 useCmsSeo(() => ({
   page: data.value?.result,
   site: data.value?.result?.site,
-  path: '/shabbat-as-a-time-ritual',
+  path: '/design-time',
   fallbackTitle: data.value?.result?.title,
 }))
 
@@ -69,6 +69,6 @@ useCmsSeo(() => ({
 
 
 <style lang="scss" scoped>
-.v-shabbat {
+.v-research {
 }
 </style>

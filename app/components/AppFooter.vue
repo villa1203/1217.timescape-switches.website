@@ -10,13 +10,15 @@
           :max_width="FOOTER_TEXT_MAX_WIDTH"
           :flip="isDark"
         />
-        <div class="v-app-footer__dark-toggle">
-          <DarkModeToggle
-            :model-value="previewDark"
-            :inline="true"
-            @update:model-value="toggleDark"
-          />
-        </div>
+        <Transition name="dark-toggle-fade">
+          <div v-if="isHome && !isResearchOpen" class="v-app-footer__dark-toggle">
+            <DarkModeToggle
+              :model-value="previewDark"
+              :inline="true"
+              @update:model-value="toggleDark"
+            />
+          </div>
+        </Transition>
       </div>
     </footer>
 </template>
@@ -28,6 +30,7 @@
 <script setup lang="ts">
 import { useIsMobile } from '~/composables/useIsMobile'
 import { useShabbatCountdown } from '~/composables/useShabbatCountdown'
+import { useResearchOverlay } from '~/composables/useResearchOverlay'
 
 /* ── layout constants — edit here ──────────────────────────────────── */
 const FOOTER_TEXT_MAX_WIDTH = 630  // px — column width for "Design Research On Ritual..."
@@ -35,6 +38,8 @@ const FOOTER_TEXT_MAX_WIDTH = 630  // px — column width for "Design Research O
 const { isMobile } = useIsMobile()
 const footerFontSize = computed(() => isMobile.value ? 18 : 24)
 const { isShabbat } = useShabbatCountdown()
+// Hide the dark-mode toggle while the Research overlay is open over the home.
+const { isOpen: isResearchOpen } = useResearchOverlay()
 const previewDark = useState('previewDark', () => false)
 function toggleDark() {
   if (!isShabbat.value) previewDark.value = !previewDark.value
@@ -79,6 +84,16 @@ const footerHidden = computed(() =>
 }
 .v-app-footer :deep(.sticker-pg__svg) {
   pointer-events: visiblePainted;
+}
+
+// Smooth fade for the dark-mode toggle when the Research overlay opens/closes.
+.dark-toggle-fade-enter-active,
+.dark-toggle-fade-leave-active {
+  transition: opacity 0.35s ease;
+}
+.dark-toggle-fade-enter-from,
+.dark-toggle-fade-leave-to {
+  opacity: 0;
 }
 
 .v-app-footer__container {
