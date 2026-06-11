@@ -24,6 +24,18 @@
           v-if="data?.result.content"
           :content="data?.result.content"
         />
+
+          <AppNewsletterForm
+              baseURL=                    "https://1217contactapi.villa1203.deno.net"
+              title=                      'Stay up with our other projects…'
+              label=                      'Email address'
+              placeholder=                'Your email address'
+              submitLabel=                "Sign up"
+              submittingLabel=            'Submitting...'
+              successMessage=             'Thank you for signing up!'
+              errorMessage=               'An error occurred. Please try again.'
+              serverResponseErrorMessage= "Error validating the email address"
+          />
       </template>
     </AppLayoutColumns>
 
