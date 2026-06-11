@@ -18,10 +18,10 @@
       </div>
 
       <!-- Right: text content with independent scroll + edge fade -->
-      <div class="v-slug__right">
+      <div class="v-slug__right" ref="rightRef">
         <h1 v-if="data?.result.title" class="v-slug__title">
           <!-- Title fills violet while the 3D transparent (glass) mode is on. -->
-          <StickerParagraph :text="data.result.title" :font_size="48" :line_height="1.0" :inverted="transparentOn" />
+          <StickerParagraph :text="data.result.title" :font_size="48" :line_height="1.0" :inverted="transparentOn" :max_width="titleMaxWidth" :blob_scale="0.6" />
         </h1>
         <p v-if="data?.result.baseline" class="v-slug__baseline">{{ data.result.baseline }}</p>
 
@@ -58,7 +58,7 @@
 
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useTransparentMode } from '~/composables/useTransparentMode'
 import {KQL_PROJECTS_SELECT, seoSelect, siteSeoSelect} from "#shared/KQLQueries";
 import { useCmsSeo, type CmsSeoFields, type CmsSiteSeo } from "~/composables/useCmsSeo";
@@ -115,6 +115,23 @@ const threeBySlug: Record<string, ReturnType<typeof defineAsyncComponent>> = {
 const threeComponent = computed(() => threeBySlug[route.params.slug as string] ?? null)
 
 const { isOn: transparentOn } = useTransparentMode()
+
+// Measure the content column so the title wraps to it (instead of the 600px /
+// viewport default), otherwise long titles get clipped as the column narrows.
+const rightRef = ref<HTMLElement | null>(null)
+const colWidth = ref(600)
+const titleMaxWidth = computed(() => Math.max(160, colWidth.value - 40))
+let colRO: ResizeObserver | null = null
+onMounted(() => {
+  if (rightRef.value && typeof ResizeObserver !== 'undefined') {
+    colRO = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width
+      if (w && w > 0) colWidth.value = w
+    })
+    colRO.observe(rightRef.value)
+  }
+})
+onBeforeUnmount(() => { colRO?.disconnect(); colRO = null })
 
 // Ordered list of objects for prev/next navigation (same order as ResearchOverlay)
 const objectsOrder = [

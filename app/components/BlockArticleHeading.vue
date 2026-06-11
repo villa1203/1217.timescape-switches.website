@@ -9,10 +9,11 @@
       >
         <div class="app-grid app-grid--align-start app-grid--justify-center app-rm-child-margin">
           <h2
+            ref="headingRef"
             :class="{
                 'app-text-align-center': !block_data.content.text
             }"
-          ><StickerParagraph :text="block_data.content.title" /></h2>
+          ><StickerParagraph :text="block_data.content.title" :max_width="headingMaxWidth" /></h2>
         </div>
       </header>
 
@@ -30,11 +31,29 @@
 </template>
 
 <script setup lang="ts">
+	import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 	import type {CMS_BlockArticleHeadingData} from "#shared/cms_api"
 
 	defineProps<{
 		block_data: CMS_BlockArticleHeadingData
 	}>()
+
+	// Measure the heading's own width so the sticker title wraps to it (instead of
+	// the 600px / viewport default) and never gets clipped as the column narrows.
+	const headingRef = ref<HTMLElement | null>(null)
+	const headingWidth = ref(600)
+	const headingMaxWidth = computed(() => Math.max(160, headingWidth.value - 8))
+	let ro: ResizeObserver | null = null
+	onMounted(() => {
+		if (headingRef.value && typeof ResizeObserver !== 'undefined') {
+			ro = new ResizeObserver((entries) => {
+				const w = entries[0]?.contentRect.width
+				if (w && w > 0) headingWidth.value = w
+			})
+			ro.observe(headingRef.value)
+		}
+	})
+	onBeforeUnmount(() => { ro?.disconnect(); ro = null })
 </script>
 
 <style scoped lang="scss">

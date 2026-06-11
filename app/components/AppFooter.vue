@@ -10,6 +10,7 @@
           :max_width="FOOTER_TEXT_MAX_WIDTH"
           :flip="isDark"
           :blob_scale="1.25"
+          @click="closeResearch"
         />
         <Transition name="dark-toggle-fade">
           <div v-if="isHome && !isResearchOpen" class="v-app-footer__dark-toggle">
@@ -40,7 +41,7 @@ const { isMobile } = useIsMobile()
 const footerFontSize = computed(() => isMobile.value ? 18 : 24)
 const { isShabbat } = useShabbatCountdown()
 // Hide the dark-mode toggle while the Research overlay is open over the home.
-const { isOpen: isResearchOpen } = useResearchOverlay()
+const { isOpen: isResearchOpen, close: closeResearch } = useResearchOverlay()
 const previewDark = useState('previewDark', () => false)
 function toggleDark() {
   if (!isShabbat.value) previewDark.value = !previewDark.value

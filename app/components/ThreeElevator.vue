@@ -611,6 +611,9 @@ function onMouseLeave() {
 }
 
 function onWheel(e) {
+  // Stacked layout (narrow window): let the wheel scroll the page instead of
+  // zooming the model — otherwise the cursor over the 3D blocks page scroll.
+  if (window.innerWidth <= 768) return
   e.preventDefault()
   spherical.radius += e.deltaY * 0.001 * modelSize
   spherical.radius = Math.max(minZoom, Math.min(maxZoom, spherical.radius))

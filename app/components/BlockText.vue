@@ -5,6 +5,7 @@
 				<StickerParagraph
 					:text="block_data.content.title"
 					:variant="sticker ? 'secondary' : undefined"
+					:max_width="bodyWidth"
 				/>
 			</h2>
 		</div>

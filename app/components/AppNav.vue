@@ -3,7 +3,7 @@
     >
       <div class="app-grid app-grid--justify-between">
         <div class="nav-left">
-          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :flip="isShabbat" :blob_scale="1.25" />
+          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :flip="isShabbat" :blob_scale="1.25" @click="closeResearch" />
         </div>
 
         <div :class="['nav-right', { 'nav-right--hidden': isOpen, 'nav-right--scroll-hidden': hiddenOnScroll, 'nav-right--locked': isShabbat }]">
@@ -45,7 +45,7 @@ const { text: shabbatText, isShabbat } = useShabbatCountdown()
 // `?shabbat` / `?dark` preview flag (set in app.vue) — lets us visualise the
 // full Shabbat state without waiting for the real weekly window.
 const previewDark = useState('previewDark', () => false)
-const { toggle: openResearch, isOpen } = useResearchOverlay()
+const { toggle: openResearch, close: closeResearch, isOpen } = useResearchOverlay()
 const { isMobile } = useIsMobile()
 const navFontSize = computed(() => isMobile.value ? 18 : 24)
 const route = useRoute()
