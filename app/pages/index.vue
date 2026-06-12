@@ -162,12 +162,6 @@ watch(isResearchOpen, (open) => {
   circlePlay.value = open ? 'out' : 'in'
 })
 
-// Leaving the home for another page: erase the circles first, then navigate.
-onBeforeRouteLeave(async () => {
-  circlePlay.value = 'out'
-  await new Promise((resolve) => setTimeout(resolve, LEAVE_ERASE_MS))
-})
-
 // Home page content from the Kirby `site` object: the Shabbat title shown in
 // place of the logo while in dark (Shabbat) mode, plus the site-level SEO that
 // doubles as the home's own SEO.
