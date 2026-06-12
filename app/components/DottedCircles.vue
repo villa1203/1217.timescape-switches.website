@@ -174,101 +174,107 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
 </script>
 
 <template>
-  <svg
-    class="dotted-circles"
-    viewBox="0 0 1565 713"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    preserveAspectRatio="xMidYMid meet"
-  >
-    <defs>
-      <linearGradient
-        v-if="gradient"
-        :id="`dc-grad-${uid}`"
-        gradientUnits="userSpaceOnUse"
-        x1="0" y1="356" x2="1565" y2="356"
-      >
-        <stop offset="0%"   stop-color="#3f3f3f" />
-        <stop offset="100%" stop-color="#000000" />
-      </linearGradient>
-
-      <clipPath :id="`dc-clip-${uid}`">
-        <ellipse cx="146"  cy="356" rx="145.5" ry="355.5" />
-        <circle  cx="423"  cy="357" r="355" />
-        <circle  cx="781"  cy="357" r="355" />
-        <circle  cx="1138" cy="357" r="355" />
-        <ellipse cx="1419" cy="356" rx="145.5" ry="355.5" />
-      </clipPath>
-
-      <mask
-        v-if="draw"
-        :id="`dc-draw-${uid}`"
-        maskUnits="userSpaceOnUse"
-        x="-50" y="-50" width="1665" height="813"
-      >
-        <g
-          class="dc-draw-strokes"
-          :class="{ 'is-in': play === 'in', 'is-out': play === 'out', 'is-shown': play === 'shown' }"
-          fill="none"
-          stroke="#fff"
-          stroke-width="14"
-          stroke-linecap="round"
-        >
-          <ellipse cx="146"  cy="356" rx="145.5" ry="355.5" pathLength="1" :style="maskVars(0)" />
-          <circle  cx="423"  cy="357" r="355" pathLength="1" :style="maskVars(1)" />
-          <circle  cx="781"  cy="357" r="355" pathLength="1" :style="maskVars(2)" />
-          <circle  cx="1138" cy="357" r="355" pathLength="1" class="dc-draw-rev" :style="maskVars(3)" />
-          <ellipse cx="1419" cy="356" rx="145.5" ry="355.5" pathLength="1" class="dc-draw-rev" :style="maskVars(4)" />
-        </g>
-      </mask>
-    </defs>
-
+  <div class="dotted-circles">
+    <!-- Sketch lives OUTSIDE the SVG: Safari/WebKit doesn't clip <foreignObject>
+         HTML to an SVG clip-path/mask, so the P5 canvas spilled out of the
+         circles. As a plain HTML layer it's clipped reliably by a CSS mask of
+         the same five circles. -->
     <Transition name="dc-sketch-fade">
-      <foreignObject
-        v-if="sketch"
-        x="0" y="0" width="1565" height="713"
-        :clip-path="`url(#dc-clip-${uid})`"
-      >
-        <div xmlns="http://www.w3.org/1999/xhtml" class="dc-sketch">
-          <P5Background :fill-container="true" :purple="sketch_purple" />
-        </div>
-      </foreignObject>
+      <div v-if="sketch" class="dc-sketch-layer">
+        <P5Background :fill-container="true" :purple="sketch_purple" />
+      </div>
     </Transition>
 
-    <g ref="shapesRef" class="dc-shapes" fill="none" :mask="draw ? `url(#dc-draw-${uid})` : undefined">
-      <ellipse
-        cx="146" cy="356" rx="145.5" ry="355.5"
-        class="dc-spin-left"
-        :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')"
-        :stroke-width="sw"
-        stroke-linecap="round"
-        stroke-dasharray="0.1 9.9"
-      />
-      <circle cx="423"  cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
-      <circle cx="781"  cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
-      <circle cx="1138" cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
-      <ellipse
-        cx="1419" cy="356" rx="145.5" ry="355.5"
-        class="dc-spin-right"
-        :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')"
-        :stroke-width="sw"
-        stroke-linecap="round"
-        stroke-dasharray="0.1 9.9"
-      />
-    </g>
-  </svg>
+    <svg
+      class="dc-svg"
+      viewBox="0 0 1565 713"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <defs>
+        <linearGradient
+          v-if="gradient"
+          :id="`dc-grad-${uid}`"
+          gradientUnits="userSpaceOnUse"
+          x1="0" y1="356" x2="1565" y2="356"
+        >
+          <stop offset="0%"   stop-color="#3f3f3f" />
+          <stop offset="100%" stop-color="#000000" />
+        </linearGradient>
+
+        <mask
+          v-if="draw"
+          :id="`dc-draw-${uid}`"
+          maskUnits="userSpaceOnUse"
+          x="-50" y="-50" width="1665" height="813"
+        >
+          <g
+            class="dc-draw-strokes"
+            :class="{ 'is-in': play === 'in', 'is-out': play === 'out', 'is-shown': play === 'shown' }"
+            fill="none"
+            stroke="#fff"
+            stroke-width="14"
+            stroke-linecap="round"
+          >
+            <ellipse cx="146"  cy="356" rx="145.5" ry="355.5" pathLength="1" :style="maskVars(0)" />
+            <circle  cx="423"  cy="357" r="355" pathLength="1" :style="maskVars(1)" />
+            <circle  cx="781"  cy="357" r="355" pathLength="1" :style="maskVars(2)" />
+            <circle  cx="1138" cy="357" r="355" pathLength="1" class="dc-draw-rev" :style="maskVars(3)" />
+            <ellipse cx="1419" cy="356" rx="145.5" ry="355.5" pathLength="1" class="dc-draw-rev" :style="maskVars(4)" />
+          </g>
+        </mask>
+      </defs>
+
+      <g ref="shapesRef" class="dc-shapes" fill="none" :mask="draw ? `url(#dc-draw-${uid})` : undefined">
+        <ellipse
+          cx="146" cy="356" rx="145.5" ry="355.5"
+          class="dc-spin-left"
+          :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')"
+          :stroke-width="sw"
+          stroke-linecap="round"
+          stroke-dasharray="0.1 9.9"
+        />
+        <circle cx="423"  cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
+        <circle cx="781"  cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
+        <circle cx="1138" cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
+        <ellipse
+          cx="1419" cy="356" rx="145.5" ry="355.5"
+          class="dc-spin-right"
+          :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')"
+          :stroke-width="sw"
+          stroke-linecap="round"
+          stroke-dasharray="0.1 9.9"
+        />
+      </g>
+    </svg>
+  </div>
 </template>
 
 <style scoped>
 .dotted-circles {
+  position: relative;
   width: 100%;
-  height: auto;
   mix-blend-mode: difference;
 }
 
-.dc-sketch {
+/* The SVG (dotted outlines only) defines the component's height via its viewBox
+   aspect; the sketch layer is absolutely sized against it. */
+.dc-svg {
+  display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
+}
+
+.dc-sketch-layer {
+  position: absolute;
+  inset: 0;
+  /* Clip the HTML sketch to the five circles with a CSS mask (viewBox matches
+     the SVG's, size:100% 100% keeps it aligned with the outlines). Works in
+     WebKit, unlike clip-path on a <foreignObject>. */
+  --dc-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201565%20713'%20preserveAspectRatio='none'%3E%3Cg%20fill='%23fff'%3E%3Cellipse%20cx='146'%20cy='356'%20rx='145.5'%20ry='355.5'/%3E%3Ccircle%20cx='423'%20cy='357'%20r='355'/%3E%3Ccircle%20cx='781'%20cy='357'%20r='355'/%3E%3Ccircle%20cx='1138'%20cy='357'%20r='355'/%3E%3Cellipse%20cx='1419'%20cy='356'%20rx='145.5'%20ry='355.5'/%3E%3C/g%3E%3C/svg%3E");
+  -webkit-mask: var(--dc-mask) center / 100% 100% no-repeat;
+          mask: var(--dc-mask) center / 100% 100% no-repeat;
 }
 
 /* ── Draw-on mask ─────────────────────────────────────────────────────── */

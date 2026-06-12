@@ -1,9 +1,9 @@
 <template>
-    <section class="app-newsletter-form">
+    <section class="app-newsletter-form" ref="rootRef">
         <h3 class="app-newsletter-form__title">
             <lazy-sticker-paragraph
                 :text="props.title"
-                :inverted="true"
+                :max_width="titleMaxWidth"
             />
         </h3>
 
@@ -221,6 +221,22 @@ const email = ref('')
 const isSubmitting = ref(false)
 const message = ref('')
 const isSuccess = ref(false)
+
+// Measure the available column width so the sticker title wraps to it (and
+// re-wraps when the window shrinks) instead of overflowing on narrow screens.
+const rootRef = ref<HTMLElement | null>(null)
+const titleMaxWidth = ref(600)
+let titleRO: ResizeObserver | null = null
+
+onMounted(() => {
+    if (!rootRef.value || typeof ResizeObserver === 'undefined') return
+    titleRO = new ResizeObserver((entries) => {
+        const w = entries[0]?.contentRect.width
+        if (w && w > 0) titleMaxWidth.value = Math.max(160, Math.floor(w))
+    })
+    titleRO.observe(rootRef.value)
+})
+onUnmounted(() => { titleRO?.disconnect(); titleRO = null })
 
 const handleSubmit = async () => {
     isSubmitting.value = true

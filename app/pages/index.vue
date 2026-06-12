@@ -29,7 +29,7 @@
           <div class="hero-logo-layer" :class="{ 'hero-anim-ready': heroReady }" :style="animDelay">
             <!-- Shabbat: a CMS-authored phrase replaces the logo (real Shabbat only, not toggle). -->
             <h1 v-if="isShabbat && shabbatTitle" class="hero-shabbat-title">
-              <StickerParagraph :text="shabbatTitle" :font_size="shabbatTitleSize" :stroke_width="shabbatTitleStroke" :max_width="1200" :line_height="1.05" :inverted="true" />
+              <StickerParagraph :text="shabbatTitle" :font_size="shabbatTitleSize" :stroke_width="shabbatTitleStroke" :border_size="shabbatTitleBorder" :max_width="1200" :line_height="1.05" :inverted="true" />
             </h1>
             <div class="hero-track" v-else>
             <svg v-for="n in 3" :key="n" width="1382" height="559" viewBox="0 0 1382 559" fill="none" xmlns="http://www.w3.org/2000/svg"
@@ -194,6 +194,11 @@ const shabbatTitleSize = computed(() => (isMobile.value ? 52 : 110))
 // Thicker blob than the default preset (which ignores font_size) so the span
 // scales with the big title.
 const shabbatTitleStroke = computed(() => Math.round(shabbatTitleSize.value * 0.42))
+// Visible coloured border before the white glow gradient. Must stay BELOW the
+// stroke width, otherwise the solid interior collapses to 2px and the gradient
+// fills the whole blob (the white started too early). Keep it a fraction of the
+// stroke so there's a solid violet core and the white fade hugs the edge.
+const shabbatTitleBorder = computed(() => Math.round(shabbatTitleStroke.value * 0.35))
 </script>
 
 
