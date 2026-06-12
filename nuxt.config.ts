@@ -26,7 +26,13 @@ export default defineNuxtConfig({
   nitro: {
     prerender: {
       routes: ['/'],
+      ignore: [
+        "/sticker-test",
+        "/globe",
+        "/info-advanced",
+      ],
     },
+
   },
 
   runtimeConfig: {
