@@ -38,7 +38,7 @@
           />
 
         <div>
-          or folowus <a href="https://www.instagram.com/bureau_1217/"
+          or follow us on <a href="https://www.instagram.com/bureau_1217/"
                         target="_blank"
                         >@bureau_1217</a>
         </div>
