@@ -31,7 +31,7 @@
             <h1 v-if="isShabbat && shabbatTitle" class="hero-shabbat-title">
               <StickerParagraph :text="shabbatTitle" :font_size="shabbatTitleSize" :stroke_width="shabbatTitleStroke" :border_size="shabbatTitleBorder" :max_width="1200" :line_height="1.05" :inverted="true" />
             </h1>
-            <div class="hero-track" v-else>
+            <div class="hero-track" v-else ref="heroTrackRef">
             <svg v-for="n in 3" :key="n" width="1382" height="559" viewBox="0 0 1382 559" fill="none" xmlns="http://www.w3.org/2000/svg"
                  :class="['hero-svg', { 'hero-svg--dark': isDark }]"
             >
@@ -151,6 +151,20 @@ const LEAVE_ERASE_MS = 800
 // computed delay, which is what threw the alignment off.)
 const heroReady = ref(false)
 const animDelay = ref<Record<string, string>>({})
+const heroTrackRef = ref<HTMLElement | null>(null)
+
+// Measure one logo copy's *rendered* width (fractional) and feed it to the
+// marquee as the exact scroll distance. A CSS `-100%/3` (or a vh×ratio calc)
+// lands a sub-pixel off the real copy edge, which made the loop flicker when
+// copy 2 reached the left edge. Matching the measured width = a perfect seam.
+function measureMarqueeShift() {
+  const copy = heroTrackRef.value?.querySelector<HTMLElement>('.hero-svg')
+  if (!copy) return
+  const w = copy.getBoundingClientRect().width
+  if (w > 0) {
+    animDelay.value = { ...animDelay.value, '--marquee-shift': `-${w}px` }
+  }
+}
 
 onMounted(() => {
   // On a fresh load the intro loader plays the draw, so the home circles start
@@ -160,6 +174,14 @@ onMounted(() => {
 
   animDelay.value = { '--marquee-delay': `${-(performance.now() % 20000)}ms` }
   heroReady.value = true
+
+  // Measure after layout (and re-measure on resize / URL-bar vh changes).
+  requestAnimationFrame(measureMarqueeShift)
+  window.addEventListener('resize', measureMarqueeShift)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', measureMarqueeShift)
 })
 
 // Opening the Research overlay erases the circles; closing it redraws them.
@@ -346,6 +368,11 @@ const shabbatTitleBorder = computed(() => Math.round(shabbatTitleStroke.value * 
 .hero-anim-ready .hero-track {
   @media (max-width: 768px) {
     animation: hero-marquee 20s linear var(--marquee-delay, 0s) infinite;
+    // Keep the marquee on its own GPU layer so iOS Safari doesn't re-rasterise
+    // (and flash) the big logo when the animation loops.
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
   }
 }
 
@@ -437,8 +464,16 @@ const shabbatTitleBorder = computed(() => Math.round(shabbatTitleStroke.value * 
 // Continuous infinite horizontal marquee — scrolls left forever.
 // -100%/3 = exactly one logo copy, so the loop is seamless.
 @keyframes hero-marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(calc(-100% / 3)); }
+  // translate3d (not translateX) forces GPU compositing — smoother loop, no
+  // flash on mobile Safari.
+  // Shift by EXACTLY one copy's width (mobile copies are height:60vh and the SVG
+  // ratio is 1382/559). Using this explicit length instead of -100%/3 avoids the
+  // sub-pixel seam — -100%/3 divides the rounded *track* width, which doesn't
+  // land exactly on a copy edge, so the loop jittered when copy 2 hit the edge.
+  from { transform: translate3d(0, 0, 0); }
+  // --marquee-shift is a negative px width set in JS (measured copy width).
+  // Fallback -33.3333% ≈ one of the three copies before the measure lands.
+  to   { transform: translate3d(var(--marquee-shift, -33.3333%), 0, 0); }
 }
 
 // Gentle floating bob for the centre hero logo.

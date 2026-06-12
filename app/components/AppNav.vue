@@ -3,7 +3,7 @@
     >
       <div class="app-grid app-grid--justify-between">
         <div :class="['nav-left', { 'nav-left--locked': isShabbat }]">
-          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :flip="isShabbat || previewDark" :blob_scale="1.25" @click="closeResearch" />
+          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :max_width="isMobile ? 330 : 600" :flip="isShabbat || previewDark" :blob_scale="1.25" @click="closeResearch" />
         </div>
 
         <div :class="['nav-right', { 'nav-right--hidden': isOpen, 'nav-right--scroll-hidden': hiddenOnScroll, 'nav-right--locked': isShabbat }]">

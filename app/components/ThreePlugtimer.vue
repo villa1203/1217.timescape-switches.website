@@ -373,7 +373,7 @@ async function init() {
       const size = box.getSize(new THREE.Vector3())
       modelSize = Math.max(size.x, size.y, size.z)
       spherical.radius = modelSize * CAMERA_DISTANCE
-      minZoom = modelSize * 1.2
+      minZoom = modelSize * 0.8
       maxZoom = modelSize * CAMERA_DISTANCE
       updateCameraPosition()
 

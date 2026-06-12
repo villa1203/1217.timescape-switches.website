@@ -35,9 +35,10 @@ import { useShabbatCountdown } from '~/composables/useShabbatCountdown'
 import { useResearchOverlay } from '~/composables/useResearchOverlay'
 
 /* ── layout constants — edit here ──────────────────────────────────── */
-const FOOTER_TEXT_MAX_WIDTH = 630  // px — column width for "Design Research On Ritual..."
-
 const { isMobile } = useIsMobile()
+// Narrower column on mobile reserves space on the right so the text wraps onto
+// more lines; desktop keeps the original wider width.
+const FOOTER_TEXT_MAX_WIDTH = computed(() => isMobile.value ? 380 : 630)
 const footerFontSize = computed(() => isMobile.value ? 18 : 24)
 const { isShabbat } = useShabbatCountdown()
 // Hide the dark-mode toggle while the Research overlay is open over the home.

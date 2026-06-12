@@ -52,6 +52,19 @@ button, .app-button {
   border: none;
 }
 
+// Site-wide focus ring: orange instead of the browser's default blue. Uses
+// :focus-visible so it only shows for keyboard / text-field focus, not on every
+// mouse click of a button or link.
+:focus-visible {
+  outline: 2px solid var(--app-color-secondary);
+  outline-offset: 2px;
+}
+
+// Site-wide text selection: a translucent orange highlight instead of the
+// browser's default blue (keeps the text's own colour underneath).
+::selection      { background-color: color-mix(in srgb, var(--app-color-secondary) 55%, transparent); }
+::-moz-selection { background-color: color-mix(in srgb, var(--app-color-secondary) 55%, transparent); }
+
 .app-video__cover {
   display: block;
   width: 100%;
