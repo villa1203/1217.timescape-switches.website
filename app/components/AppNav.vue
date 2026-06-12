@@ -2,8 +2,8 @@
     <nav class="v-nav app-with-padding--left-right app-with-padding--top-bottom"
     >
       <div class="app-grid app-grid--justify-between">
-        <div class="nav-left">
-          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :flip="isShabbat" :blob_scale="1.25" @click="closeResearch" />
+        <div :class="['nav-left', { 'nav-left--locked': isShabbat }]">
+          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :flip="isShabbat || previewDark" :blob_scale="1.25" @click="closeResearch" />
         </div>
 
         <div :class="['nav-right', { 'nav-right--hidden': isOpen, 'nav-right--scroll-hidden': hiddenOnScroll, 'nav-right--locked': isShabbat }]">
@@ -16,14 +16,14 @@
                 :font_size="navFontSize"
                 color="var(--app-color-primary)"
                 :active="researchActive"
-                :flip="isShabbat"
+                :flip="isShabbat || previewDark"
                 :blob_scale="1.25"
               />
             </div>
 
               <div style="overflow: hidden !important;" >
                   <div style="width: 100%; aspect-ratio: 7.25/1" />
-              <StickerButton text="Info" @click="openInfo" :font_size="navFontSize" :active="isInfoPage" :flip="isShabbat" :blob_scale="1.25" />
+              <StickerButton text="Info" @click="openInfo" :font_size="navFontSize" :active="isInfoPage" :flip="isShabbat || previewDark" :blob_scale="1.25" />
             </div>
           </div>
         </div>
@@ -123,12 +123,12 @@ function onScrollCapture(e: Event) {
 onMounted(async () => {
   window.addEventListener('scroll', onScrollCapture, { capture: true, passive: true })
 
-  // Preview (?shabbat): simulate the active Shabbat state and skip the geo +
-  // API calls entirely.
-  if (previewDark.value) {
-    await updateShabbatCountdown()
-    return
-  }
+  // Previews bypass the live geo + Hebcal lookup so nothing overwrites the forced
+  // state (child mounts before app.vue's onMounted, so read the query directly):
+  //  • ?shabbat → force the real Shabbat look on.
+  //  • ?dark / manual toggle → dark aesthetic only; no Shabbat, no API.
+  if ('shabbat' in route.query) { isShabbat.value = true; return }
+  if (previewDark.value || 'dark' in route.query) return
 
   // Get user's location first
   await getUserLocation()
@@ -387,6 +387,11 @@ async function updateShabbatCountdown() {
 // home — other pages are inaccessible during Shabbat).
 .nav-right--locked {
   opacity: 0.35;
+  pointer-events: none;
+}
+
+// Shabbat: the left "Weekly Timescape" button is also non-interactive.
+.nav-left--locked {
   pointer-events: none;
 }
 

@@ -7,12 +7,12 @@ export default defineNuxtRouteMiddleware((to) => {
 
   const isShabbat = useState('isShabbat', () => false)
 
-  const dark =
-    isShabbat.value ||
-    'shabbat' in to.query ||
-    'dark' in to.query
+  // Only the real Shabbat window (or its ?shabbat preview) locks the site to the
+  // home. The ?dark toggle preview is a purely aesthetic mode — it does NOT
+  // restrict navigation.
+  const shabbat = isShabbat.value || 'shabbat' in to.query
 
-  if (dark && to.path !== '/') {
+  if (shabbat && to.path !== '/') {
     return navigateTo('/')
   }
 })

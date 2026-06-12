@@ -102,9 +102,21 @@ const footerHidden = computed(() =>
   position: relative;
 }
 
-// Shabbat: dim the footer like the navigation.
+// Shabbat: dim the footer like the navigation, and make its home link
+// non-clickable (override the .sticker-pg__svg hit-test re-enable above).
 .v-app-footer--locked {
   opacity: 0.35;
+
+  :deep(.sticker-pg__svg) {
+    pointer-events: none;
+  }
+
+  // Dark-mode toggle (bottom-right) is a no-op during Shabbat — also block its
+  // clicks. Overrides the toggle's own pointer-events:auto !important below.
+  .v-app-footer__dark-toggle,
+  .v-app-footer__dark-toggle :deep(*) {
+    pointer-events: none !important;
+  }
 }
 
 .v-app-footer__dark-toggle {

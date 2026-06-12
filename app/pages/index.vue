@@ -1,10 +1,11 @@
 <template>
   <main class="v-index"
   >
-    <!-- Globe wireframe background (light mode). Shabbat/dark mode keeps its
-         own DottedCircles instead. -->
+    <!-- Globe wireframe background (light mode). It has a white background, so
+         hide it during Shabbat (black bg) and the toggle's dark mode — both keep
+         the DottedCircles instead. -->
     <Transition name="globe-collapse">
-      <WireframeGlobe v-if="!isDark" class="v-index__globe" :fill-viewport="true" />
+      <WireframeGlobe v-if="!isDark && !isShabbat" class="v-index__globe" :fill-viewport="true" />
     </Transition>
     <div class="app-grid app-grid--align-center app-grid--justify-center"
     >
@@ -14,13 +15,13 @@
             <!-- Circles always shown; sketch + bigger dots only in toggle mode -->
             <DottedCircles
               class="hero-circles"
-              :style="isDark ? { mixBlendMode: 'normal' } : {}"
-              :color="'#820FC1'"
-              :stroke_width="isDark ? 0.8 : 1.6"
-              :sketch="isDark"
+              :style="darkCircles ? { mixBlendMode: 'normal' } : {}"
+              :color="isShabbat ? '#ffffff' : '#820FC1'"
+              :stroke_width="darkCircles ? 0.8 : 1.6"
+              :sketch="darkCircles"
               :sketch_purple="isDark"
-              :dot_size="isDark ? 2.2 : 0.1"
-              :pulse="!isDark"
+              :dot_size="darkCircles ? 2.2 : 0.1"
+              :pulse="!darkCircles"
               :draw="true"
               :play="circlePlay"
             />
@@ -124,6 +125,10 @@ const { isDark } = useDarkMode()
 // `isShabbat` = the real weekly Shabbat window (API-based, location-aware).
 // Drives the black background, locked nav/footer, and the CMS shabbat title.
 const { isShabbat } = useShabbatCountdown()
+// Both the dark toggle and the real Shabbat give the circles their "dark"
+// treatment: P5 line sketch clipped inside, bigger dots, no pulse. Only the dot
+// colour differs (white during Shabbat, purple otherwise).
+const darkCircles = computed(() => isDark.value || isShabbat.value)
 const { isMobile } = useIsMobile()
 const { isOpen: isResearchOpen } = useResearchOverlay()
 const { loaderDone } = useAppLoader()
@@ -286,10 +291,10 @@ const shabbatTitleStroke = computed(() => Math.round(shabbatTitleSize.value * 0.
   margin: 0;
   width: 100%;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;  // big title flush to the left of the window
   box-sizing: border-box;
   padding: 0 2rem;
-  text-align: center;
+  text-align: left;             // lines read flush-left (fer à gauche)
 }
 
 // Wrapper around the logo track. Desktop: centres the single logo. Mobile:
@@ -369,9 +374,9 @@ const shabbatTitleStroke = computed(() => Math.round(shabbatTitleSize.value * 0.
   // instant mix-blend-mode switch is hidden. Paths stagger in with a decel curve.
   &.hero-svg--dark {
     mix-blend-mode: normal;
-    // Fade the entire SVG in with a short delay so the mode switch is invisible.
-    animation: hero-dark-enter 0.35s ease 0.2s both;
-
+    // No whole-SVG opacity reset here: the white fill + glow fade out on their
+    // own (opacity 0 with the 0.5s transition above) while the dark strokes draw
+    // in — a smooth crossfade instead of the logo vanishing abruptly.
     .hero-svg__fill,
     .hero-svg__glow { opacity: 0; }
 
@@ -384,11 +389,6 @@ const shabbatTitleStroke = computed(() => Math.round(shabbatTitleSize.value * 0.
     > path:nth-of-type(2) { animation-delay: 0.35s; }
     > path:nth-of-type(3) { animation-delay: 0.50s; }
     > path:nth-of-type(4) { animation-delay: 0.65s; }
-  }
-
-  @keyframes hero-dark-enter {
-    from { opacity: 0; }
-    to   { opacity: 1; }
   }
 
   @keyframes hero-path-trim {

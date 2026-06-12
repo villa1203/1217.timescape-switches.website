@@ -61,14 +61,19 @@ const footerHidden = computed(() =>
 // setup (runs on SSR too) so the header/footer render already revealed there.
 if (route.path !== '/') loaderDone.value = true
 
-// Dark (black-background) mode is on during Shabbat. `?shabbat` (or `?dark`) in
-// the URL forces it on so the look can be previewed outside of Shabbat. The
-// preview flag persists across client-side navigation for the session.
+// Two SEPARATE looks, each with its own preview flag (persist for the session):
+//  • ?shabbat → the real weekly Shabbat look: black background + centred title
+//    replacing the logo + locked nav/footer. Driven by `isShabbat`.
+//  • ?dark    → the bottom-right toggle's dark aesthetic only (hidden globe,
+//    purple circles, dark logo). No title, no lock. Driven by `previewDark`.
 const { isShabbat } = useShabbatCountdown()
 const previewDark = useState('previewDark', () => false)
 onMounted(() => {
-  if ('shabbat' in route.query || 'dark' in route.query) previewDark.value = true
+  if ('shabbat' in route.query) isShabbat.value = true
+  if ('dark' in route.query) previewDark.value = true
 })
+// Black-background mode = real Shabbat only (the toggle's dark aesthetic does
+// NOT darken the page background — it stays a distinct, lighter look).
 const isDark = computed(() => isShabbat.value)
 
 // Shabbat: only the home is accessible. If Shabbat turns on while the user is
