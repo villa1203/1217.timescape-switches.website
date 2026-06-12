@@ -174,8 +174,20 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
 </script>
 
 <template>
+  <div class="dotted-circles">
+    <Transition name="dc-sketch-fade">
+      <P5Background
+        v-if="sketch"
+        class="dotted-circles__sketch"
+        :fill-container="true"
+        :purple="sketch_purple"
+        clip-circles
+      />
+    </Transition>
+
+
   <svg
-    class="dotted-circles"
+    class="dotted-circles__svg"
     viewBox="0 0 1565 713"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -192,13 +204,6 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
         <stop offset="100%" stop-color="#000000" />
       </linearGradient>
 
-      <clipPath :id="`dc-clip-${uid}`">
-        <ellipse cx="146"  cy="356" rx="145.5" ry="355.5" />
-        <circle  cx="423"  cy="357" r="355" />
-        <circle  cx="781"  cy="357" r="355" />
-        <circle  cx="1138" cy="357" r="355" />
-        <ellipse cx="1419" cy="356" rx="145.5" ry="355.5" />
-      </clipPath>
 
       <mask
         v-if="draw"
@@ -223,18 +228,6 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
       </mask>
     </defs>
 
-    <Transition name="dc-sketch-fade">
-      <foreignObject
-        v-if="sketch"
-        x="0" y="0" width="1565" height="713"
-        :clip-path="`url(#dc-clip-${uid})`"
-      >
-        <div xmlns="http://www.w3.org/1999/xhtml" class="dc-sketch">
-          <P5Background :fill-container="true" :purple="sketch_purple" />
-        </div>
-      </foreignObject>
-    </Transition>
-
     <g ref="shapesRef" class="dc-shapes" fill="none" :mask="draw ? `url(#dc-draw-${uid})` : undefined">
       <ellipse
         cx="146" cy="356" rx="145.5" ry="355.5"
@@ -244,9 +237,12 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
         stroke-linecap="round"
         stroke-dasharray="0.1 9.9"
       />
-      <circle cx="423"  cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
-      <circle cx="781"  cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
-      <circle cx="1138" cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')" :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9" />
+      <circle cx="423" cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')"
+              :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9"/>
+      <circle cx="781" cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')"
+              :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9"/>
+      <circle cx="1138" cy="357" r="355" :stroke="gradient ? `url(#dc-grad-${uid})` : (color || 'white')"
+              :stroke-width="sw" stroke-linecap="round" stroke-dasharray="0.1 9.9"/>
       <ellipse
         cx="1419" cy="356" rx="145.5" ry="355.5"
         class="dc-spin-right"
@@ -257,18 +253,32 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
       />
     </g>
   </svg>
+  </div>
 </template>
 
 <style scoped>
 .dotted-circles {
+  position: relative;
+  display: block;
   width: 100%;
   height: auto;
   mix-blend-mode: difference;
 }
 
-.dc-sketch {
+.dotted-circles__sketch {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  z-index: 0;
+}
+
+.dotted-circles__svg {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: auto;
+  z-index: 1;
 }
 
 /* ── Draw-on mask ─────────────────────────────────────────────────────── */

@@ -7,9 +7,15 @@ import { useShabbatCountdown } from '~/composables/useShabbatCountdown'
 // absolute, inset 0) instead of covering the whole window. Used when the sketch
 // is embedded inside another box — e.g. clipped to the circles in DottedCircles.
 // `purple`: draw purple (#820FC1) lines instead of black/white.
-const props = withDefaults(defineProps<{ fillContainer?: boolean, purple?: boolean }>(), {
+// `clipCircles`: clip drawing directly in the canvas context to the Timescape circles.
+const props = withDefaults(defineProps<{
+  fillContainer?: boolean
+  purple?: boolean
+  clipCircles?: boolean
+}>(), {
   fillContainer: false,
   purple: false,
+  clipCircles: false,
 })
 
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -42,6 +48,45 @@ onMounted(async () => {
       const el = containerRef.value
       if (props.fillContainer && el) return [el.clientWidth, el.clientHeight]
       return [p.windowWidth, p.windowHeight]
+    }
+
+    const addEllipsePath = (
+      ctx: CanvasRenderingContext2D,
+      cx: number,
+      cy: number,
+      rx: number,
+      ry: number,
+    ) => {
+      ctx.save()
+      ctx.translate(cx, cy)
+      ctx.scale(rx, ry)
+      ctx.moveTo(1, 0)
+      ctx.arc(0, 0, 1, 0, Math.PI * 2)
+      ctx.restore()
+    }
+
+    const addCirclesPath = (ctx: CanvasRenderingContext2D) => {
+      const sx = ctx.canvas.width / 1565
+      const sy = ctx.canvas.height / 713
+      ctx.beginPath()
+      addEllipsePath(ctx, 146 * sx, 356 * sy, 145.5 * sx, 355.5 * sy)
+      ctx.moveTo((423 + 355) * sx, 357 * sy)
+      ctx.arc(423 * sx, 357 * sy, 355 * sx, 0, Math.PI * 2)
+      ctx.moveTo((781 + 355) * sx, 357 * sy)
+      ctx.arc(781 * sx, 357 * sy, 355 * sx, 0, Math.PI * 2)
+      ctx.moveTo((1138 + 355) * sx, 357 * sy)
+      ctx.arc(1138 * sx, 357 * sy, 355 * sx, 0, Math.PI * 2)
+      addEllipsePath(ctx, 1419 * sx, 356 * sy, 145.5 * sx, 355.5 * sy)
+    }
+
+    const applyCirclesMask = (ctx: CanvasRenderingContext2D) => {
+      ctx.save()
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.globalCompositeOperation = 'destination-in'
+      addCirclesPath(ctx)
+      ctx.fillStyle = '#fff'
+      ctx.fill()
+      ctx.restore()
     }
 
     p.setup = () => {
@@ -88,6 +133,11 @@ onMounted(async () => {
           p.line(xPos, 0, xPos, hSpc)
           p.pop()
         }
+      }
+
+      if (props.clipCircles) {
+        const ctx = p.drawingContext as CanvasRenderingContext2D
+        applyCirclesMask(ctx)
       }
     }
 
