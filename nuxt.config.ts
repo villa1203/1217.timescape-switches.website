@@ -29,7 +29,12 @@ export default defineNuxtConfig({
 
   nitro: {
     prerender: {
-      routes: ['/'],
+      failOnError: true,
+      routes: [
+        '/',
+        '/robots.txt',
+        '/sitemap.xml',
+      ],
       ignore: [
         "/sticker-test",
         "/globe",
