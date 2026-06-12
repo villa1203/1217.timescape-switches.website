@@ -689,22 +689,39 @@ function onWheel(e) {
 }
 
 let touchStart = null
+// Finger spread at the last touch event — drives pinch-to-zoom.
+let lastTouchDist = 0
 // Centroid of the first two touches — drives the 3D on a two-finger drag.
 function twoFingerCenter(e) {
   const a = e.touches[0], b = e.touches[1]
   return { clientX: (a.clientX + b.clientX) / 2, clientY: (a.clientY + b.clientY) / 2 }
+}
+// Distance between the two active touches — drives pinch-to-zoom.
+function twoFingerDist(e) {
+  const a = e.touches[0], b = e.touches[1]
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
 }
 function onTouchStart(e) {
   // One finger scrolls the page; only a two-finger gesture drives the 3D.
   if (e.touches.length < 2) return
   e.preventDefault()
   touchStart = twoFingerCenter(e)
+  lastTouchDist = twoFingerDist(e)
   onMouseDown(touchStart)
 }
 
 function onTouchMove(e) {
   if (e.touches.length < 2) return
   e.preventDefault()
+  // Pinch to zoom: scale the camera radius by how the finger spread changed.
+  // Spreading fingers (dist grows) shrinks the radius → zoom in; pinching zooms out.
+  const dist = twoFingerDist(e)
+  if (lastTouchDist > 0 && dist > 0) {
+    spherical.radius *= lastTouchDist / dist
+    spherical.radius = Math.max(minZoom, Math.min(maxZoom, spherical.radius))
+    updateCameraPosition()
+  }
+  lastTouchDist = dist
   onMouseMove(twoFingerCenter(e))
 }
 

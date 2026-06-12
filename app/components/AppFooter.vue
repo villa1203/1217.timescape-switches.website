@@ -8,7 +8,7 @@
           to="/"
           :font_size="footerFontSize"
           :max_width="FOOTER_TEXT_MAX_WIDTH"
-          :flip="isDark"
+          :flip="previewDark"
           :blob_scale="1.25"
           @click="closeResearch"
         />

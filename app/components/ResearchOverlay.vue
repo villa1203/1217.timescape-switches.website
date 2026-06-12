@@ -134,7 +134,7 @@ const { isOpen, close } = useResearchOverlay()
 // the blob outline that extends past the text.
 const listRef = ref<HTMLElement | null>(null)
 const listWidth = ref(600)
-const stickerMaxWidth = computed(() => Math.max(120, listWidth.value - 32))
+const stickerMaxWidth = computed(() => Math.max(120, listWidth.value - 8))
 let listRO: ResizeObserver | null = null
 
 // Fetch each object's CMS 3D model URL so the hover preview loads the same .glb
@@ -245,10 +245,9 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 /* ── overlay shell ── */
 .research-overlay {
-  // How long to wait before the panel covers the home. The dotted circles keep
-  // erasing underneath (DottedCircles: 1.5s + 0.6s stagger), but the panel now
-  // fades in earlier so the overlay feels snappier to open.
-  --overlay-open-delay: 0.8s;
+  // Delay before the panel covers the home (also gates the close button's
+  // reveal). Set to 0s so the Research panel opens immediately.
+  --overlay-open-delay: 0s;
 
   position: fixed;
   inset: 0;
@@ -415,6 +414,11 @@ onUnmounted(() => {
   :deep(.dotted-circles) {
     width: 110%;
     height: auto;
+    // The SVG lays the 5 circles out horizontally; rotate it a quarter-turn so
+    // they stack vertically in this panel. Width 110% of the (portrait) preview
+    // becomes the rotated column's height, so it fills the panel top-to-bottom.
+    transform: rotate(90deg);
+    transform-origin: center;
     // Over the white panel keep the real purple (the component defaults to
     // mix-blend-mode: difference, tuned for the home's animated background).
     mix-blend-mode: normal;
@@ -486,6 +490,14 @@ onUnmounted(() => {
   // Side margins so the sticker outlines aren't clipped at the column edges.
   padding-left: 2.5rem;
   padding-right: 2.5rem;
+
+  // Mobile: tighter side padding — 2.5rem each side ate too much of the narrow
+  // column, so the links wrapped early and left a big right margin. ~1.25rem
+  // still clears the sticker blob outline.
+  @media (max-width: 768px) {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
 }
 
 .list-content {

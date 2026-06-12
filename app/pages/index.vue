@@ -292,10 +292,10 @@ const shabbatTitleStroke = computed(() => Math.round(shabbatTitleSize.value * 0.
   margin: 0;
   width: 100%;
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   box-sizing: border-box;
   padding: 0 2rem;
-  text-align: left;
+  text-align: center;
 }
 
 // Wrapper around the logo track. Desktop: centres the single logo. Mobile:

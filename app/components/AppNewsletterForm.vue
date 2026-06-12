@@ -1,9 +1,11 @@
 <template>
     <section class="app-newsletter-form">
-        <lazy-sticker-text
-            :font_size="20"
-            :text="props.title"
-        />
+        <h3 class="app-newsletter-form__title">
+            <lazy-sticker-paragraph
+                :text="props.title"
+                :inverted="true"
+            />
+        </h3>
 
         <form class="app-newsletter-form__form"
               v-if="!isSuccess" @submit.prevent="handleSubmit"
@@ -42,21 +44,9 @@
 </template>
 
 <style lang="scss" scoped >
-/* ── tweakables ─────────────────────────────────────────────── */
-$pill-width:        5rem;
-$pill-width-mobile: 4rem;    // smaller pill on mobile (≤768px)
-$border:       2px;
-$color:        #820FC1;
-$bg:           #ffffff;
-$knob-inset:   8%;       // distance from pill edge to knob (off state)
-$knob-height:  70%;      // knob diameter relative to pill height
-$ease:         0.25s ease;
-
-/* sticker effect — inner glow fading from edge to center
-   (= the inset shadow equivalent of StickerParagraph's stacked glow strokes) */
-$glow-pill:    12px;     // pill inner-glow blur radius
-$glow-knob:    6px;      // knob inner-glow blur radius
-$glow-alpha:   0.65;
+/* sticker "blob" effect — purple inner glow fading from the pill edge to the
+   centre, tuned to read like the outer colored blob of the StickerParagraph
+   stickers (same primary purple, soft falloff). */
 
 .app-newsletter-form {
     width: 100%;
@@ -66,6 +56,9 @@ $glow-alpha:   0.65;
     align-items: flex-start;
     border-radius: 1rem;
     gap: 1rem;
+    /* Sit clear of the content block above it and breathe before the footer. */
+    margin-top: 3rem;
+    margin-bottom: 2rem;
 }
 
 .app-newsletter-form__form {
@@ -80,16 +73,29 @@ $glow-alpha:   0.65;
     flex-wrap: wrap;
 
     button {
-        border-radius: 1rem;
+        /* Fully rounded pill. */
+        border-radius: 999px;
+        /* Same look as the buttons on hover: violet fill, white edges, with the
+           soft white→violet gradient (= the inverted sticker blob, mirrored here
+           on a rounded rectangle). White border + inset white glow. */
         background: var(--app-color-primary);
+        border: 2px solid var(--app-color-light);
+        box-shadow: inset 0 0 12px color-mix(in srgb, var(--app-color-light) 75%, transparent);
         color: var(--app-color-light);
         text-align: center;
-        height: 2rem;
+        /* Match the email field's *visible* height: add the 2px top+bottom white
+           border on top of the field's 2rem so the violet fill is exactly 2rem
+           (the white border is invisible on the white background). */
+        height: calc(2rem + 4px);
         box-sizing: border-box;
         padding: .25rem 1rem;
         line-height: 1rem;
-    }
+        cursor: pointer;
+        transition: opacity .2s ease;
 
+        &:hover { opacity: .85; }
+        &:disabled { opacity: .6; cursor: default; }
+    }
 }
 
 .app-newsletter-form__form__label {
@@ -105,7 +111,16 @@ $glow-alpha:   0.65;
         padding: .25rem 1rem;
         width: 100%;
         border: none;
-        box-shadow: inset 0 0 $glow-pill rgba($color, $glow-alpha);
+        color: var(--app-color-primary);
+        background: var(--app-color-light);
+        /* "blob" inner glow — same primary purple as the sticker blobs. */
+        box-shadow: inset 0 0 12px color-mix(in srgb, var(--app-color-primary) 65%, transparent);
+
+        &::placeholder {
+            /* "Your email address" — violet with opacity. */
+            color: var(--app-color-primary);
+            opacity: .5;
+        }
     }
 }
 
@@ -122,8 +137,9 @@ $glow-alpha:   0.65;
 
 
 .app-newsletter-form__title {
-    text-align: center;
     margin: 0;
+    /* Override the h3 user-agent bold so the blob text stays regular weight. */
+    font-weight: normal;
 }
 
 .app-newsletter-form__btn {
