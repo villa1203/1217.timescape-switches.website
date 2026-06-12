@@ -141,11 +141,6 @@ onUnmounted(() => {
   height: 100vh;
   z-index: 1;
   pointer-events: none;
-  mix-blend-mode: multiply;
-}
-
-.p5-background--dark {
-  mix-blend-mode: screen;
 }
 
 .p5-background--contained {
