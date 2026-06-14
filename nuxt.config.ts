@@ -3,6 +3,10 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
+  devServer: {
+    port: 3020,
+  },
+
   app: {
     baseURL: '/',
     head: {
@@ -36,7 +40,12 @@ export default defineNuxtConfig({
     compressPublicAssets: { gzip: true, brotli: true },
 
     prerender: {
-      routes: ['/'],
+      failOnError: true,
+      routes: [
+        '/',
+        '/robots.txt',
+        '/sitemap.xml',
+      ],
       ignore: [
         "/sticker-test",
         "/globe",

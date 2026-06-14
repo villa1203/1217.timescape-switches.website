@@ -36,6 +36,13 @@
               errorMessage=               'An error occurred. Please try again.'
               serverResponseErrorMessage= "Error validating the email address"
           />
+
+        <div>
+          or follow us on <a href="https://www.instagram.com/bureau_1217/"
+                        target="_blank"
+                        >@bureau_1217</a>
+        </div>
+
       </template>
     </AppLayoutColumns>
 

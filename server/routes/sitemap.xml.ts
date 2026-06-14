@@ -1,9 +1,10 @@
 // Dynamic sitemap. Lists the public front-end routes, pulling each page's
 // indexation toggle from the CMS so `noindex` pages are excluded. URLs are
 // absolute, built from runtimeConfig.public.siteUrl.
+import { getRequiredSiteUrl } from '../utils/siteUrl'
+
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig()
-  const siteUrl = String(config.public.siteUrl || '').replace(/\/+$/, '')
+  const siteUrl = getRequiredSiteUrl('sitemap.xml')
 
   // Default to indexed unless the CMS toggle is explicitly "false".
   const indexed = (v: unknown) => v !== 'false' && v !== false
