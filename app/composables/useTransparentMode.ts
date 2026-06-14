@@ -1,8 +1,10 @@
-// Shared state for the object-page bottom-right switch.
-// When `isOn` is true the slug page renders its 3D model in transparent
-// ("glass") mode; otherwise it stays in normal mode with the hover xray reveal.
+// Object-page "transparent" (glass) 3D mode. Backed by the SAME shared state as
+// the dark-mode toggle (`previewDark`, see useDarkMode) so the two are a single
+// linked mode: enabling dark mode on the home also renders the objects' 3D in
+// glass mode, and toggling the object-page switch also turns on the dark
+// aesthetic — it's conceptually one button.
 export const useTransparentMode = () => {
-  const isOn   = useState('transparentMode_isOn', () => false)
+  const isOn   = useState('previewDark', () => false)
   const toggle = () => { isOn.value = !isOn.value }
   return { isOn, toggle }
 }

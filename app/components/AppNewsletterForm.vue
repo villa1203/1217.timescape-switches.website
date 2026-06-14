@@ -60,9 +60,6 @@
     /* Sit clear of the content block above it and breathe before the footer. */
     margin-top: 3rem;
     margin-bottom: 2rem;
-    /* Small left inset so the input's orange focus ring isn't clipped by the
-       column's overflow on the left edge. */
-    padding-left: 0.5rem;
 }
 
 .app-newsletter-form__form {
@@ -117,6 +114,10 @@
         border: none;
         color: var(--app-color-primary);
         background: var(--app-color-light);
+        /* Draw the focus ring inside the field so it isn't clipped by the
+           column's overflow on the left edge (replaces the old padding-left
+           inset, which misaligned the block from the other content blocks). */
+        outline-offset: -2px;
         /* "blob" inner glow — same primary purple as the sticker blobs. */
         box-shadow: inset 0 0 12px color-mix(in srgb, var(--app-color-primary) 65%, transparent);
 

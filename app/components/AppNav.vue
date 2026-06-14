@@ -3,7 +3,7 @@
     >
       <div class="app-grid app-grid--justify-between">
         <div :class="['nav-left', { 'nav-left--locked': isShabbat }]">
-          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :max_width="isMobile ? 330 : 600" :flip="isShabbat || previewDark" :blob_scale="1.25" @click="closeResearch" />
+          <StickerButton :text="shabbatText" to="/" :font_size="navFontSize" :max_width="isMobile ? 330 : 600" :flip="isShabbat" :blob_scale="1.25" @click="closeResearch" />
         </div>
 
         <div :class="['nav-right', { 'nav-right--hidden': isOpen, 'nav-right--scroll-hidden': hiddenOnScroll, 'nav-right--locked': isShabbat }]">
@@ -16,14 +16,14 @@
                 :font_size="navFontSize"
                 color="var(--app-color-primary)"
                 :active="researchActive"
-                :flip="isShabbat || previewDark"
+                :flip="isShabbat"
                 :blob_scale="1.25"
               />
             </div>
 
               <div style="overflow: hidden !important;" >
                   <div style="width: 100%; aspect-ratio: 7.25/1" />
-              <StickerButton text="Info" @click="openInfo" :font_size="navFontSize" :active="isInfoPage" :flip="isShabbat || previewDark" :blob_scale="1.25" />
+              <StickerButton text="Info" @click="openInfo" :font_size="navFontSize" :active="isInfoPage" :flip="isShabbat" :blob_scale="1.25" />
             </div>
           </div>
         </div>
@@ -42,9 +42,6 @@ import { useShabbatCountdown } from '~/composables/useShabbatCountdown'
 import { useResearchOverlay } from '~/composables/useResearchOverlay'
 import { useIsMobile } from '~/composables/useIsMobile'
 const { text: shabbatText, isShabbat } = useShabbatCountdown()
-// `?shabbat` / `?dark` preview flag (set in app.vue) — lets us visualise the
-// full Shabbat state without waiting for the real weekly window.
-const previewDark = useState('previewDark', () => false)
 const { toggle: openResearch, close: closeResearch, isOpen } = useResearchOverlay()
 const { isMobile } = useIsMobile()
 const navFontSize = computed(() => isMobile.value ? 18 : 24)
@@ -123,12 +120,15 @@ function onScrollCapture(e: Event) {
 onMounted(async () => {
   window.addEventListener('scroll', onScrollCapture, { capture: true, passive: true })
 
-  // Previews bypass the live geo + Hebcal lookup so nothing overwrites the forced
-  // state (child mounts before app.vue's onMounted, so read the query directly):
+  // Query previews bypass the live geo + Hebcal lookup so nothing overwrites the
+  // forced state (child mounts before app.vue's onMounted, so read the query
+  // directly):
   //  • ?shabbat → force the real Shabbat look on.
-  //  • ?dark / manual toggle → dark aesthetic only; no Shabbat, no API.
+  //  • ?dark    → dark aesthetic preview only; no Shabbat, no API.
+  // NB: the real Shabbat lookup ALWAYS runs otherwise — the dark-mode toggle
+  // (previewDark) must not disable the live Shabbat lock.
   if ('shabbat' in route.query) { isShabbat.value = true; return }
-  if (previewDark.value || 'dark' in route.query) return
+  if ('dark' in route.query) return
 
   // Get user's location first
   await getUserLocation()

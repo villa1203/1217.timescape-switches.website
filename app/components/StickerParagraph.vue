@@ -65,6 +65,14 @@ const PAD = computed(() => Math.ceil(sw.value / 2))
 // y of the first line's baseline (same as StickerText)
 const textY = computed(() => fs.value * 1.1)
 
+// Top buffer: textY (= fs*1.1) doesn't leave enough room above the first line for
+// the glyph ascent + the outer blob's half-stroke, so the blob's top sits at a
+// negative y. We relied on overflow:visible to show it, but an ancestor's
+// overflow clip (e.g. the page scroll context on mobile) cropped it. Reserve
+// half the stroke above the box — mirrors the bottom buffer below — so the blob
+// is always inside the viewBox and can never be clipped.
+const topPad = computed(() => sw.value / 2)
+
 // Total SVG height: first baseline + each extra line + stroke buffer below.
 // Bottom buffer must cover descender (~fs*0.3) + half stroke. Using sw is enough;
 // the SVG has overflow:visible so the blob can extend beyond the box anyway.
@@ -273,7 +281,7 @@ const startX = computed(() => PAD.value)
   <span class="sticker-pg" ref="stickerRef">
     <svg
       class="sticker-pg__svg"
-      :viewBox="`0 0 ${svgWidth} ${svgHeight}`"
+      :viewBox="`0 ${-topPad} ${svgWidth} ${svgHeight + topPad}`"
       :style="{ width: `${svgWidth}px` }"
     >
       <defs>

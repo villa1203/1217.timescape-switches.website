@@ -38,86 +38,35 @@ const DOT = computed(() => props.dot_size)
 const GAP = computed(() => Math.max(0.1, 10 - DOT.value))
 const EMPTY_RATIO = 0
 
-// ── Pulse constants ───────────────────────────────────────────────────────
-const MAX_RATE    = 5
-const MAX_DASH    = 4
-const DUR_MIN     = 3000
-const DUR_MAX     = 8000
-const DUR_JITTER  = 0.25
-const REST_MIN    = 6000
-const REST_MAX    = 22000
+// ── Pulse (CSS-driven) ──────────────────────────────────────────────────────
+// The dots periodically swell. Driven entirely by CSS @keyframes (see <style>):
+// each shape gets a randomised peak / duration / delay via CSS custom
+// properties, set once on mount, so the five circles pulse out of sync (organic
+// feel) without a per-frame JS loop. NB: unlike the old rAF version this no
+// longer accelerates the rotation during a pulse — CSS can't drive another
+// animation's playback rate.
+const PEAK_MIN = 0.5
+const PEAK_MAX = 4
+const DUR_MIN  = 12
+const DUR_MAX  = 28
 
-// Store per-element computed dasharray so it restores perfectly after the pulse.
-const baseDA = new Map<SVGGeometryElement, string>()
-
-let pulseTimer: ReturnType<typeof setTimeout> | null = null
-let pulseRafId = 0
-let isPulsing  = false
-
-function scheduleNextPulse() {
-  if (!props.pulse) return
-  const delay = REST_MIN + Math.random() * (REST_MAX - REST_MIN)
-  pulseTimer = setTimeout(triggerPulse, delay)
+function shapeEls(group: SVGGElement) {
+  return Array.from(group.querySelectorAll('ellipse, circle')) as SVGGeometryElement[]
 }
 
-function triggerPulse() {
-  if (isPulsing || !props.pulse) return
+// Randomise each shape's pulse params once, so the circles swell out of sync.
+function setupPulseVars() {
   const group = shapesRef.value
   if (!group) return
-  isPulsing = true
-
-  const peakRate = 1.5 + Math.random() * (MAX_RATE - 1.5)
-  const dashMax  = 0.5 + Math.random() * (MAX_DASH - 0.5)
-  const baseDur  = DUR_MIN + Math.random() * (DUR_MAX - DUR_MIN)
-  const accelMs  = Math.min(DUR_MAX, baseDur * (1 + (Math.random() * 2 - 1) * DUR_JITTER))
-  const decelMs  = Math.min(DUR_MAX, baseDur * (1 + (Math.random() * 2 - 1) * DUR_JITTER))
-
-  const shapes = Array.from(group.querySelectorAll('ellipse, circle')) as SVGGeometryElement[]
-  const swVal  = sw.value
-  // Capture current dot/gap so the pulse is consistent even if prop changes mid-flight.
-  const dot = DOT.value
-  const gap = GAP.value
-  const start  = performance.now()
-
-  const tick = () => {
-    const elapsed = performance.now() - start
-    let progress: number
-
-    if (elapsed < accelMs) {
-      const t = elapsed / accelMs
-      progress = t * t * t
-    } else if (elapsed < accelMs + decelMs) {
-      const t = (elapsed - accelMs) / decelMs
-      progress = (1 - t) * (1 - t)
-    } else {
-      progress = 0
-    }
-
-    const d = dot + progress * (dashMax - dot)
-    const g = gap - progress * (gap - (10 - dashMax))
-    const rate = 1 + progress * (peakRate - 1)
-    const w    = swVal * (1 + progress * 0.2)
-
-    shapes.forEach(el => {
-      el.style.strokeDasharray = `${d.toFixed(2)} ${g.toFixed(2)}`
-      el.style.strokeWidth     = w.toFixed(2)
-      el.getAnimations().forEach(a => { a.playbackRate = rate })
-    })
-
-    if (elapsed < accelMs + decelMs) {
-      pulseRafId = requestAnimationFrame(tick)
-    } else {
-      shapes.forEach(el => {
-        el.style.strokeDasharray = baseDA.get(el) ?? ''
-        el.style.strokeWidth     = ''
-        el.getAnimations().forEach(a => { a.playbackRate = 1 })
-      })
-      isPulsing = false
-      scheduleNextPulse()
-    }
+  for (const el of shapeEls(group)) {
+    const peak  = PEAK_MIN + Math.random() * (PEAK_MAX - PEAK_MIN)
+    const dur   = DUR_MIN + Math.random() * (DUR_MAX - DUR_MIN)
+    const delay = -Math.random() * dur   // negative → start mid-cycle, staggered
+    el.style.setProperty('--dc-peak', peak.toFixed(2))
+    el.style.setProperty('--dc-pulse-dur', `${dur.toFixed(1)}s`)
+    el.style.setProperty('--dc-pulse-delay', `${delay.toFixed(1)}s`)
+    el.style.setProperty('--dc-sw', String(sw.value))
   }
-
-  pulseRafId = requestAnimationFrame(tick)
 }
 
 function measureShapes() {
@@ -125,47 +74,27 @@ function measureShapes() {
   if (!group) return
   const dot = DOT.value
   const gap = GAP.value
-  for (const el of Array.from(group.querySelectorAll('ellipse, circle')) as SVGGeometryElement[]) {
+  for (const el of shapeEls(group)) {
     const len = el.getTotalLength()
     const n = Math.max(2, Math.round(((1 - EMPTY_RATIO) * len + dot) / (dot + gap)))
     const hole = Math.max(dot, len - ((n - 1) * (dot + gap) + dot))
     const dash = `${Array(n - 1).fill(`${dot} ${gap}`).join(' ')} ${dot} ${hole}`
     el.style.strokeDasharray = dash
     el.style.setProperty('--len', String(len))
-    baseDA.set(el, dash)
   }
 }
 
 onMounted(() => {
   measureShapes()
-  scheduleNextPulse()
+  setupPulseVars()
 })
 
 watch(() => props.dot_size, () => {
   if (shapesRef.value) measureShapes()
 })
 
-watch(() => props.pulse, (on) => {
-  if (!on) {
-    if (pulseTimer) { clearTimeout(pulseTimer); pulseTimer = null }
-    cancelAnimationFrame(pulseRafId)
-    isPulsing = false
-    const group = shapesRef.value
-    if (group) {
-      for (const el of Array.from(group.querySelectorAll('ellipse, circle')) as SVGGeometryElement[]) {
-        el.style.strokeDasharray = baseDA.get(el) ?? ''
-        el.style.strokeWidth = ''
-        el.getAnimations().forEach(a => { a.playbackRate = 1 })
-      }
-    }
-  } else {
-    scheduleNextPulse()
-  }
-})
-
-onUnmounted(() => {
-  if (pulseTimer) clearTimeout(pulseTimer)
-  cancelAnimationFrame(pulseRafId)
+watch(() => props.stroke_width, () => {
+  if (shapesRef.value) setupPulseVars()
 })
 
 // `--order`: draw order from the outside in — outermost shapes (0 & 4) first,
@@ -226,7 +155,7 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
         </mask>
       </defs>
 
-      <g ref="shapesRef" class="dc-shapes" fill="none" :mask="draw ? `url(#dc-draw-${uid})` : undefined">
+      <g ref="shapesRef" class="dc-shapes" :class="{ 'dc-shapes--pulse': pulse }" fill="none" :mask="draw ? `url(#dc-draw-${uid})` : undefined">
         <ellipse
           cx="146" cy="356" rx="145.5" ry="355.5"
           class="dc-spin-left"
@@ -341,8 +270,38 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
 .dc-shapes > circle:nth-child(4) { --gap-dur: 40s; animation-direction: reverse; }
 .dc-spin-right                   { --gap-dur: 28s; }
 
+/* ── Pulse (random per-circle swell, CSS-only) ────────────────────────────
+   Each shape carries randomised --dc-peak / --dc-pulse-dur / --dc-pulse-delay
+   (set once in JS) so the circles swell out of sync. --dc-pulse animates 0→1
+   and drives the dot length + stroke width via calc(). Added as a second entry
+   in the animation list (longhands, so the per-shape spin direction is kept).
+   Replaces the old requestAnimationFrame pulse loop. */
+@property --dc-pulse {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+.dc-shapes--pulse ellipse,
+.dc-shapes--pulse > circle {
+  animation-name: dc-gap-spin, dc-pulse;
+  animation-duration: var(--gap-dur, 32s), var(--dc-pulse-dur, 18s);
+  animation-timing-function: linear, ease-in-out;
+  animation-iteration-count: infinite, infinite;
+  animation-delay: 0s, var(--dc-pulse-delay, 0s);
+  stroke-dasharray:
+    calc((0.1 + var(--dc-pulse) * (var(--dc-peak, 2) - 0.1)) * 1px)
+    calc((9.9 - var(--dc-pulse) * (var(--dc-peak, 2) - 0.1)) * 1px);
+  stroke-width: calc(var(--dc-sw, 1.5) * 1px * (1 + var(--dc-pulse) * 0.2));
+}
+@keyframes dc-pulse {
+  0%, 55%, 100% { --dc-pulse: 0; }
+  80%           { --dc-pulse: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dc-shapes ellipse,
-  .dc-shapes > circle { animation: none; }
+  .dc-shapes > circle,
+  .dc-shapes--pulse ellipse,
+  .dc-shapes--pulse > circle { animation: none; }
 }
 </style>
