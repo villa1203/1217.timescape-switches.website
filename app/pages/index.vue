@@ -5,7 +5,7 @@
          hide it during Shabbat (black bg) and the toggle's dark mode — both keep
          the DottedCircles instead. -->
     <Transition name="globe-collapse">
-      <WireframeGlobe v-if="!isDark && !isShabbat" class="v-index__globe" :fill-viewport="true" />
+      <WireframeGlobe v-if="!isDark && !isShabbat" class="v-index__globe" :fill-viewport="true" :paused="isDark || isShabbat" />
     </Transition>
     <div class="app-grid app-grid--align-center app-grid--justify-center"
     >
@@ -178,6 +178,17 @@ onMounted(() => {
   // Measure after layout (and re-measure on resize / URL-bar vh changes).
   requestAnimationFrame(measureMarqueeShift)
   window.addEventListener('resize', measureMarqueeShift)
+
+  // Warm the p5 module during idle so the FIRST dark-mode toggle doesn't pay the
+  // import + parse cost synchronously (that main-thread spike is what made the
+  // toggle button feel unresponsive and the switch janky on mobile).
+  const warmP5 = () => { import('p5') }
+  if ('requestIdleCallback' in window) {
+    (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => void })
+      .requestIdleCallback(warmP5, { timeout: 3000 })
+  } else {
+    setTimeout(warmP5, 2000)
+  }
 })
 
 onUnmounted(() => {
@@ -251,6 +262,19 @@ const shabbatTitleBorder = computed(() => Math.round(shabbatTitleStroke.value * 
 .globe-collapse-enter-from {
   opacity: 0;
   transform: scale(0.015);
+}
+
+// Mobile: skip the scale-collapse choreography — just a plain, GPU-cheap opacity
+// cross-fade straight to the end state (smoother on weak devices, no jank).
+@media (max-width: 768px) {
+  .globe-collapse-enter-active,
+  .globe-collapse-leave-active {
+    transition: opacity 0.5s ease;
+  }
+  .globe-collapse-enter-from,
+  .globe-collapse-leave-to {
+    transform: none;
+  }
 }
 
 .v-index__intro-container {
@@ -383,12 +407,15 @@ const shabbatTitleBorder = computed(() => Math.round(shabbatTitleStroke.value * 
   z-index: 1;
   mix-blend-mode: multiply;
 
+  // Gentler, coordinated with the circles' sketch fade so the whole mode switch
+  // reads as one smooth transition (rather than each element changing on its own
+  // timing — most noticeable on mobile).
   .hero-svg__fill {
     opacity: 0.15;
-    transition: opacity 0.5s ease;
+    transition: opacity 0.8s ease;
   }
   .hero-svg__glow {
-    transition: opacity 0.5s ease;
+    transition: opacity 0.8s ease;
   }
 
   // Base: set up stroke-dasharray so the trim-path animation can transition smoothly.
@@ -454,6 +481,12 @@ const shabbatTitleBorder = computed(() => Math.round(shabbatTitleStroke.value * 
     // vector-crisp) letters. The fill is only 15% opaque, so the visual change
     // is minimal. Animations are untouched.
     mix-blend-mode: normal;
+
+    // Mobile dark switch: skip the stroke-dashoffset draw-in (a per-frame repaint,
+    // not GPU-composited → janky). The dark logo just cross-fades to its end state.
+    &.hero-svg--dark > path {
+      animation: none;
+    }
 
     &:nth-child(n + 2) {
       display: block;

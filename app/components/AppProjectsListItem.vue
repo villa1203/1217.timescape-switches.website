@@ -42,6 +42,8 @@
           <img class="app-grid__col-4 v-app-projects-list__visual app-grid__shrink-0"
                v-else
                :src="item.small.url"
+               loading="lazy"
+               decoding="async"
           />
         </template>
       </div>

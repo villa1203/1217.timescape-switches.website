@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 
-const props = withDefaults(defineProps<{ fillViewport?: boolean }>(), { fillViewport: false })
+const props = withDefaults(defineProps<{ fillViewport?: boolean, paused?: boolean }>(), {
+  fillViewport: false,
+  paused: false,
+})
 const svgRef = ref<SVGSVGElement | null>(null)
 
 // ─── Constants ────────────────────────────────────────────────────────────
@@ -199,12 +202,34 @@ onMounted(() => {
   }
 
   window.addEventListener('mousemove', onMouseMove, { passive: true })
+  document.addEventListener('visibilitychange', onVisibilityChange)
   animFrame = requestAnimationFrame(animate)
+})
+
+// Stop the per-frame SVG path rebuild entirely while the tab is hidden (browsers
+// only throttle rAF, they don't stop it) — saves CPU on the home.
+function onVisibilityChange() {
+  cancelAnimationFrame(animFrame)
+  if (!document.hidden) {
+    lastTime = 0
+    animFrame = requestAnimationFrame(animate)
+  }
+}
+
+// Pause on demand (e.g. while the home switches to dark mode): stops the heavy
+// per-frame path rewrites so the main thread is free for the transition.
+watch(() => props.paused, (paused) => {
+  cancelAnimationFrame(animFrame)
+  if (!paused && !document.hidden) {
+    lastTime = 0
+    animFrame = requestAnimationFrame(animate)
+  }
 })
 
 onUnmounted(() => {
   cancelAnimationFrame(animFrame)
   window.removeEventListener('mousemove', onMouseMove)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
   meridianElsB = []
   meridianElsP = []
   latitudeElsB = []

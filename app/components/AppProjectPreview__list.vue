@@ -6,6 +6,8 @@
       <img class="v-app-project-preview--list__cover"
            v-if="image?.large.url"
            :src="image.large.url"
+           loading="lazy"
+           decoding="async"
       />
     </nuxt-link>
 </template>

@@ -16,6 +16,8 @@
               <img class="block-client-list__logo"
                    v-if="client.logo?.reg.url"
                    :src="client.logo?.reg.url"
+                   loading="lazy"
+                   decoding="async"
               />
               <div v-else
                    class="block-client-list__name"

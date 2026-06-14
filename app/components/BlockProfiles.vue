@@ -6,6 +6,8 @@
         v-if="profile.photo"
         :src="profile.photo.reg.url"
         :alt="profile.photo.alt ?? ''"
+        loading="lazy"
+        decoding="async"
       />
 
       <div>{{ profile.first_name }} {{ profile.last_name }}</div>

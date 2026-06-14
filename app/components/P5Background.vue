@@ -23,8 +23,11 @@ onMounted(async () => {
   const p5 = (await import('p5')).default
 
   const sketch = (p: p5Type) => {
-    const lCount = 40
-    const rCount = 40
+    // Far fewer flow lines on mobile (40×40 = 1600 → 22×22 ≈ 480 per frame): the
+    // sketch is much cheaper to init and run, so the dark-mode switch doesn't jank.
+    const isMobileViewport = typeof window !== 'undefined' && window.innerWidth <= 768
+    const lCount = isMobileViewport ? 22 : 40
+    const rCount = isMobileViewport ? 22 : 40
     const sw = 0.5
     const fxMin = 0.1
     const fxMax = 1

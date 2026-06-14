@@ -11,6 +11,8 @@
       <template v-else>
         <img class="v-app-project-preview__cover"
              :src="image?.reg.url"
+             loading="lazy"
+             decoding="async"
         />
       </template>
       <div>

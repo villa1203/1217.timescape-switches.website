@@ -229,6 +229,19 @@ async function getUserLocation() {
     console.log('Timezone fallback failed')
   }
 
+  // Fallback 3 (always succeeds): estimate longitude from the UTC offset
+  // (~15°/hour) for any timezone not in the map above, with a central-Europe-ish
+  // default latitude. Rough, but enough to compute plausible Shabbat times so the
+  // mode never silently stays off just because no precise location was found.
+  try {
+    const offsetMin = new Date().getTimezoneOffset() // minutes behind UTC (UTC+2 → -120)
+    userLocation = { latitude: 47, longitude: -offsetMin / 4, city: 'estimated' }
+    console.log('Using UTC-offset location estimate:', userLocation)
+    return
+  } catch (err) {
+    console.log('UTC-offset estimate failed')
+  }
+
   console.log('All geolocation methods failed')
 }
 
@@ -279,6 +292,7 @@ async function updateShabbatCountdown() {
 
       // If we're between candle lighting and havdalah, Shabbat is active
       if (now >= candleTime && now < havdalahTime) {
+        isShabbat.value = true
         const timeDiff = havdalahTime.getTime() - now.getTime()
         const hours = Math.floor(timeDiff / (1000 * 60 * 60))
         const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))

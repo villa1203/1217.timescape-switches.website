@@ -306,13 +306,26 @@ const maskVars = (i: number) => ({ '--order': 2 - Math.abs(i - 2) })
 }
 
 /* ── Sketch fade ─────────────────────────────────────────────────────── */
-.dc-sketch-fade-enter-active,
+/* Entering: hold at 0 for a beat so P5 has time to load + paint a first frame
+   (slower on mobile), then ease in — avoids the sketch popping in mid-switch.
+   Leaving: a quicker, plain fade out. */
+.dc-sketch-fade-enter-active {
+  transition: opacity 0.9s ease 0.35s;
+}
 .dc-sketch-fade-leave-active {
-  transition: opacity 0.6s ease;
+  transition: opacity 0.5s ease;
 }
 .dc-sketch-fade-enter-from,
 .dc-sketch-fade-leave-to {
   opacity: 0;
+}
+/* Mobile: simple, uniform fade with no hold delay — a smooth cross-fade to the
+   end state rather than a staged animation. */
+@media (max-width: 768px) {
+  .dc-sketch-fade-enter-active,
+  .dc-sketch-fade-leave-active {
+    transition: opacity 0.5s ease;
+  }
 }
 
 /* ── Rotating dots ────────────────────────────────────────────────────── */

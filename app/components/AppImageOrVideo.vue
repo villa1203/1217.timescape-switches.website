@@ -1,10 +1,12 @@
 <template>
     <div class="v-app-image-or-video"
     >
-      <video v-if="src.endsWith('.mp4')" :src="src" autoplay loop muted />
+      <video v-if="src.endsWith('.mp4')" :src="src" autoplay loop muted playsinline preload="metadata" />
       <img v-else
            :src="src"
            :alt="src"
+           loading="lazy"
+           decoding="async"
       />
     </div>
 </template>
