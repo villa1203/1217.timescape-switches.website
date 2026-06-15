@@ -17,7 +17,7 @@ export function decodeObfuscatedHTML(
     mouseMoved = true
     window.setTimeout(() => {
       propsToUpdate.value = decodeEncodedBlocks(obfuscatedText)
-    }, 0)
+    }, 500)
   }
 
   window.addEventListener('mousemove', onUserGesture)
