@@ -24,7 +24,10 @@
 					/>
 				</div>
 			</template>
-			<div v-else v-html="block_data.content.text"/>
+      <AppObfuscatedText
+        v-else
+        :text="block_data.content.text"
+      />
 		</div>
 	</section>
 

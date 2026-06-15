@@ -14,7 +14,11 @@
         <div class="block-bullet-point__item__title">
           <h3 v-if="item.title"><StickerParagraph :text="item.title" size="sm" /></h3>
         </div>
-        <div v-if="item.text" class="body-1 block-bullet-point__item__text" v-html="item.text" />
+        <div v-if="item.text"
+             class="body-1 block-bullet-point__item__text"
+        >
+          <AppObfuscatedText :text="item.text" />
+        </div>
       </div>
     </div>
 
