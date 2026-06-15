@@ -11,7 +11,9 @@
       decoding="async"
       class="object-image__img"
     />
-    <figcaption v-if="caption" class="object-image__caption caption" v-html="caption" />
+    <figcaption v-if="caption" class="object-image__caption caption">
+      <AppObfuscatedText :text="caption" />
+    </figcaption>
   </figure>
 </template>
 
