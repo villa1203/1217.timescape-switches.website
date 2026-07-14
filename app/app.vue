@@ -17,7 +17,14 @@
       <AppFooter/>
     </div>
 
-    <ResearchOverlay />
+    <!-- Client-only: the overlay teleports to <body> and is closed (invisible) on
+         load. Rendering it on the server produced a SECOND `Teleport to="body"`
+         alongside AppLoader's, and Vue's SSR hydration misaligned the two
+         teleport blocks (button-vs-loader node mismatches). It has no SEO value
+         and nothing to paint at first load, so skipping SSR here is free. -->
+    <ClientOnly>
+      <ResearchOverlay />
+    </ClientOnly>
 
     <AppLoader />
   </div>
