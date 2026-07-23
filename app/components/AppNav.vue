@@ -252,8 +252,8 @@ async function updateShabbatCountdown() {
     // Hebcal now requires an explicit `tzid` when querying by lat/long — without
     // it the API returns HTTP 400 ("Timezone required") and the countdown never
     // updates. Use the browser timezone (falling back to UTC if unavailable).
-    const tzid = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-    const url = `https://www.hebcal.com/shabbat?cfg=json&latitude=${userLocation.latitude}&longitude=${userLocation.longitude}&tzid=${encodeURIComponent(tzid)}&b=18&M=on&leyning=off`
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    const url = `https://www.hebcal.com/shabbat?cfg=json&latitude=${userLocation.latitude}&longitude=${userLocation.longitude}&tzid=${encodeURIComponent(timeZone)}&b=18&M=on&leyning=off`
 
     const response = await fetch(url)
     if (!response.ok) return
