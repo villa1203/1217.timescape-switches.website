@@ -71,6 +71,8 @@ let mousePos = { x: 0.5, y: 0.5 }
 
 /* ─────────────────────────── fluid simulation state ───────────────── */
 let fluidCanvas, fluidCtx, fluidTexture
+let fluidCleared = false
+let visibilityObserver = null, offscreen = false
 const fluidTrail = []
 const maxTrailLength = 12
 let animTime = 0
@@ -176,8 +178,10 @@ function switchToGlassMode() {
 
 /* ─────────────────────────── init ─────────────────────────────────── */
 async function init() {
-  THREE = await import('three').then(m => m.default ?? m)
-  const { GLTFLoader: Loader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
+  // Only the three.js classes the viewers use (tree-shaken), see utils/three.ts
+  THREE = await import('~/utils/three')
+  // Cached download (shared with the Research overlay) + Meshopt support
+  const Loader = THREE.CachedGLTFLoader
   GLTFLoader = Loader
 
   canvas = canvasRef.value
@@ -195,17 +199,20 @@ async function init() {
     alpha: true,
     powerPreference: 'high-performance'
   })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, THREE.MAX_DPR))
   renderer.setSize(W, H, false)
   renderer.shadowMap.enabled = true
+  // Lights and model never move (only the camera orbits): compute the shadow
+  // map once the model is in, instead of on every frame.
+  renderer.shadowMap.autoUpdate = false
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.3
 
   /* Render targets for dual-scene compositing */
-  const targetW = W * Math.min(window.devicePixelRatio, 2)
-  const targetH = H * Math.min(window.devicePixelRatio, 2)
+  const targetW = W * Math.min(window.devicePixelRatio, THREE.MAX_DPR)
+  const targetH = H * Math.min(window.devicePixelRatio, THREE.MAX_DPR)
 
   renderTarget1 = new THREE.WebGLRenderTarget(targetW, targetH, {
     minFilter: THREE.LinearFilter,
@@ -410,6 +417,7 @@ async function init() {
 
       normalScene.add(model)
       xrayScene.add(xrayModel)
+      renderer.shadowMap.needsUpdate = true
       loading.value = false
       initFluidSimulation()
       // apply the initial mode — the props.mode watcher only fires on change, not on mount
@@ -429,6 +437,12 @@ async function init() {
   // window 'resize' alone misses these, leaving camera.aspect wrong → squashed.
   resizeObserver = new ResizeObserver(() => onResize())
   resizeObserver.observe(canvas)
+  // Stop the render loop while the canvas is scrolled out of view.
+  visibilityObserver = new IntersectionObserver(([entry]) => {
+    offscreen = !entry.isIntersecting
+    if (!offscreen) requestRender()
+  })
+  visibilityObserver.observe(canvas)
   canvas.addEventListener('mousedown', onMouseDown)
   canvas.addEventListener('mousemove', onMouseMove)
   canvas.addEventListener('mouseup', onMouseUp)
@@ -472,6 +486,17 @@ function initFluidSimulation() {
 
 function updateFluidSimulation() {
   if (!fluidCtx) return
+  // Trail fully faded and no pointer: skip the 1024px 2D redraw and the
+  // texture upload (they ran every frame, even while just auto-rotating).
+  if (!pointerInside && fluidTrail.length === 0 && fluidDecayFrames <= 0) {
+    if (!fluidCleared) {
+      fluidCtx.clearRect(0, 0, fluidCanvas.width, fluidCanvas.height)
+      if (fluidTexture) fluidTexture.needsUpdate = true
+      fluidCleared = true
+    }
+    return
+  }
+  fluidCleared = false
 
   animTime += 0.003
 
@@ -519,7 +544,7 @@ function updateFluidSimulation() {
 
 /* ─────────────────────────── animate ──────────────────────────────── */
 function requestRender() {
-  if (props.paused || renderRequested) return
+  if (props.paused || renderRequested || offscreen) return
   renderRequested = true
   animId = requestAnimationFrame(animate)
 }
@@ -603,8 +628,8 @@ function onResize() {
   camera.updateProjectionMatrix()
   renderer.setSize(W, H, false)
 
-  const targetW = W * Math.min(window.devicePixelRatio, 2)
-  const targetH = H * Math.min(window.devicePixelRatio, 2)
+  const targetW = W * Math.min(window.devicePixelRatio, THREE.MAX_DPR)
+  const targetH = H * Math.min(window.devicePixelRatio, THREE.MAX_DPR)
 
   if (renderTarget1) {
     renderTarget1.setSize(targetW, targetH)
@@ -750,9 +775,13 @@ onMounted(() => { init() })
 onUnmounted(() => {
   cancelAnimationFrame(animId)
   resizeObserver?.disconnect()
+  visibilityObserver?.disconnect()
   window.removeEventListener('resize', onResize)
   if (renderer) {
     renderer.dispose()
+    // Release the WebGL context now: browsers cap live contexts (~16) and
+    // client-side navigation between objects otherwise piles them up.
+    renderer.forceContextLoss()
     if (renderTarget1) renderTarget1.dispose()
     if (renderTarget2) renderTarget2.dispose()
   }
@@ -760,6 +789,11 @@ onUnmounted(() => {
   normalMaterials.forEach(mat => mat.dispose())
   xrayMaterials.forEach(mat => mat.dispose())
   glassMaterials.forEach(mat => mat.dispose())
+  fluidTexture?.dispose()
+  if (compositingMesh) {
+    compositingMesh.geometry.dispose()
+    compositingMesh.material.dispose()
+  }
 
   if (model) {
     model.traverse((child) => {

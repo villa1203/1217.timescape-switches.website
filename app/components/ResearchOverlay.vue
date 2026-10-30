@@ -125,6 +125,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { useResearchOverlay } from '~/composables/useResearchOverlay'
+import { useObjectModels } from '~/composables/useObjectModels'
 
 const { isOpen, close } = useResearchOverlay()
 
@@ -137,31 +138,9 @@ const listWidth = ref(600)
 const stickerMaxWidth = computed(() => Math.max(120, listWidth.value - 8))
 let listRO: ResizeObserver | null = null
 
-// Fetch each object's CMS 3D model URL so the hover preview loads the same .glb
-// as the detail page. (The bundled /public/*.glb fallbacks were removed once
-// the models moved into the CMS, so the preview must get its URL from there.)
-const { data: modelsData } = useFetch<{ result: { slug: string; model: { url: string } | null }[] }>(
-  '/api/CMS_KQLRequest',
-  {
-    lazy: true,
-    method: 'POST',
-    body: {
-      query: "page('objects').children.listed",
-      select: {
-        slug: true,
-        model: { query: 'page.model_file.toFile', select: { url: true } },
-      },
-    },
-  },
-)
-
-const modelUrlBySlug = computed<Record<string, string>>(() => {
-  const map: Record<string, string> = {}
-  for (const o of modelsData.value?.result ?? []) {
-    if (o.model?.url) map[o.slug] = o.model.url
-  }
-  return map
-})
+// CMS 3D model URL per slug — loaded at build time by app.vue (the overlay is
+// client-only, and the KQL API route doesn't exist on the static host).
+const modelUrlBySlug = useObjectModels()
 
 const ThreeKettle    = defineAsyncComponent(() => import('./ThreeKettle.vue'))
 const ThreeSwitch    = defineAsyncComponent(() => import('./ThreeSwitch.vue'))

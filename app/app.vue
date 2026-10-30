@@ -35,6 +35,7 @@
 import { computed, onMounted, watch } from 'vue'
 import { useShabbatCountdown } from '~/composables/useShabbatCountdown'
 import { useAppLoader } from '~/composables/useAppLoader'
+import { loadObjectModels } from '~/composables/useObjectModels'
 import {initMatomo, updateMatomoWithNavigation} from "#shared/matomo";
 
 
@@ -107,6 +108,10 @@ useRouter().afterEach(() => {
     atBottom.value = false
   }
 })
+
+// 3D model URLs for the Research overlay, resolved at build time (see
+// composable). Kept last: an `await` in setup should follow the sync composables.
+await loadObjectModels()
 </script>
 
 

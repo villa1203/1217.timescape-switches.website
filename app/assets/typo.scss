@@ -1,7 +1,10 @@
+// Fonts are served from /public/fonts (absolute URL, not processed by Vite) so the
+// <link rel="preload"> in nuxt.config, these @font-face rules and the sticker
+// measuring worker all hit the SAME url — one download per font, preload reused.
 // Happy Times NG
 @font-face {
   font-family: 'Happy Times NG';
-  src: url('fonts/happy-times-NG_regular_master_web.woff2') format('woff2');
+  src: url('/fonts/happy-times-NG_regular_master_web.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -9,7 +12,7 @@
 
 @font-face {
   font-family: 'Happy Times NG';
-  src: url('fonts/happy-times-NG_italic_master_web.woff2') format('woff2');
+  src: url('/fonts/happy-times-NG_italic_master_web.woff2') format('woff2');
   font-weight: 400;
   font-style: italic;
   font-display: swap;
@@ -17,7 +20,7 @@
 
 @font-face {
   font-family: 'Happy Times NG';
-  src: url('fonts/happy-times-NG_bold_master_web.woff2') format('woff2');
+  src: url('/fonts/happy-times-NG_bold_master_web.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -26,7 +29,7 @@
 // Sligoil
 @font-face {
   font-family: 'Sligoil';
-  src: url('fonts/Sligoil-Micro.woff2') format('woff2');
+  src: url('/fonts/Sligoil-Micro.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -34,7 +37,7 @@
 
 @font-face {
   font-family: 'Sligoil';
-  src: url('fonts/Sligoil-MicroMedium.woff2') format('woff2');
+  src: url('/fonts/Sligoil-MicroMedium.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
@@ -42,7 +45,7 @@
 
 @font-face {
   font-family: 'Sligoil';
-  src: url('fonts/Sligoil-MicroBold.woff2') format('woff2');
+  src: url('/fonts/Sligoil-MicroBold.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
